@@ -10,16 +10,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Web Annotator</title>
 </head>
-<body>
+<body class="card">
     <noscript> You need to enable JavaScript to run this app.</noscript>
-    <div id="popup" class="card">
+    <div id="popup">
         <div class="card-body">
             <div class="card-title">
-                <h5 id="annotation-title" class="px-2 py-2 rounded-top">Current Intelligence Summary - Congo - June 24, 2015 - PDF
-                    <div id="left-arrow"></div>
-                    <div id="current-annotation"></div>
-                    <div id="right-arrow"></div>
-                </h5>
+                <div class="container">
+                    <div class="row justify-content-start">
+                        <div class="col-8">
+                            <h6 id="annotation-title" class="px-2 py-2 rounded-top">Current Intelligence Summary - Congo - June 24, 2015 - PDF</h6>
+                        </div>
+                        <div class="container btn-group-sm btn-dark col-4 justify-content-end" role="group" aria-label="Basic example">
+                            <div class="row">
+                                <button type="button" class="btn btn-outline-light col-4">Left</button>
+                                <button type="button" class="btn btn-outline-light col-4">1/5</button>
+                                <button type="button" class="btn btn-outline-light col-4">Right</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <input id="search-input" class="form-control" type="search" placeholder="Search" aria-label="Search">
             </div>
             <div id="annotation-list">
