@@ -102,3 +102,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# ignore .DS_Store -> MacOS file created when viewing a folder in 'finder'
+.DS_Store
