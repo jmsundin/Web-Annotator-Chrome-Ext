@@ -5,6 +5,16 @@
 
 /* global variable declarations and assignments */
 
+const highlightColorChoices = [
+  "yellow",
+  "red",
+  "blue",
+  "green",
+  "white",
+  "grey",
+];
+const actions = {highlightSelectedText: "highlight-selected-text"};
+
 /* end of global variable declarations */
 
 /* ----------- getter functions ----------------- */
@@ -58,6 +68,7 @@ function sendMessageActiveTab(json) {
       //chrome.tabs.sendMessage(tab.id, json, function(response) {});
 
       // for longer messaging, open a messaging port
+      console.log("inside sendMessageActiveTab: tabUrl: " + tab.url);
       const port = chrome.tabs.connect(tab.id);
       port.postMessage(json);
       port.onDisconnect = (err) => {
@@ -86,32 +97,29 @@ function onUpdatedTabHandler(tabId, changeInfo, tabInfo) {
   console.log(tabInfo);
 }
 
+/* info object passed when contextMenu item is clicked
+  info = { // of these the menuItemId is required
+      menuItemId: string or int: the ID of the menu item that was clicked,
+      pageUrl: string: The URL of the page where the menu item was clicked. This property is not set if the click occured in a context where there is no current page, such as in a launcher context menu.,
+      selectionText: string: The text for the context selection, if any.,
+      srcUrl: string: Will be present for elements with a 'src' URL.
+    } */
 function contextMenusHandler(info, tab) {
-  /* info object passed when contextMenu item is clicked
-    info = {
-      checked: 
-
-    }
-  */
-
-  if (info.menuItemId === "yellow") {
+  console.log("contextMenuesHandler: menuItemId: " + info.menuItemId);
+  if (highlightColorChoices.includes(info.menuItemId)) {
     sendMessageActiveTab({
-      action: "highlight-selected-text",
-      highlightColor: "yellow",
+      action: actions.highlightSelectedText,
+      highlightColor: info.menuItemId,
+      tabUrl: tab.url,
+      tabTitle: tab.title,
     });
-  } else if (info.menuItemId === "red") {
-    sendMessageActiveTab({
-      action: "highlight-selected-text",
-      highlightColor: "red",
-    });
-  } else if (info.menuItemId === "grey") {
-    sendMessageActiveTab({
-      action: "highlight-selected-text",
-      highlightColor: "grey",
-    });
-  } else {
-    sendMessageActiveTab({});
   }
+}
+
+// callback function for context menu create functions
+// if error occured, chrome.runtime.lastError will include it
+function contextMenusCreateCallbackHandler() {
+  console.log("context menu create error: " + chrome.runtime.lastError);
 }
 
 /* end: handler functions */
@@ -127,24 +135,33 @@ chrome.contextMenus.onClicked.addListener(contextMenusHandler);
 
 /* end: listeners */
 
-// context menu
-chrome.contextMenus.create({
-  id: "yellow",
-  title: "Yellow", // (Ctrl-Shift-Y)",
-  itemType: "normal",
-  contextType: ["selection"],
-});
+// context menu create takes two parameters (menuItemProperties, callbackHandler)
+chrome.contextMenus.create(
+  {
+    id: "yellow",
+    title: "yellow", // (Ctrl-Shift-Y)",
+    type: "normal",
+    contexts: ["selection"],
+  },
+  contextMenusCreateCallbackHandler
+);
 
-chrome.contextMenus.create({
-  id: "red",
-  title: "red", // (Ctrl-Shift-Y)",
-  type: "normal",
-  contexts: ["selection"],
-});
+chrome.contextMenus.create(
+  {
+    id: "red",
+    title: "red", // (Ctrl-Shift-Y)",
+    type: "normal",
+    contexts: ["selection"],
+  },
+  contextMenusCreateCallbackHandler
+);
 
-chrome.contextMenus.create({
-  id: "grey",
-  title: "grey", // (Ctrl-Shift-Y)",
-  type: "normal",
-  contexts: ["selection"],
-});
+chrome.contextMenus.create(
+  {
+    id: "grey",
+    title: "grey", // (Ctrl-Shift-Y)",
+    type: "normal",
+    contexts: ["selection"],
+  },
+  contextMenusCreateCallbackHandler
+);
