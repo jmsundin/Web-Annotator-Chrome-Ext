@@ -4,6 +4,7 @@
   "description": "Chrome extension to search, annotate web pages, and store annotated chunks.",
   "main": "./scripts/index.js",
   "scripts": {
+    "format": "prettier \"./**/*.{js, jsx, json}\" --write",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,6 +24,9 @@
   },
   "dependencies": {
     "bootstrap": "^5.2.0",
-    "mdb-ui-kit": "^4.3.0"
+    "jsdom-quokka-plugin": "^1.0.16",
+    "mdb-ui-kit": "^4.3.0",
+    "quokka": "^0.0.7",
+    "requirejs": "^2.3.6"
   }
 }
