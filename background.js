@@ -32,7 +32,7 @@ function getActiveTab() {
   let tabQueryPromise = chrome.tabs.query(queryOptions);  // chrome.tabs.query returns a Promise object
   tabQueryPromise.then((activeTab) => {
       if (activeTab){
-        console.log("in getActiveTab: activeTab JSON string: " + JSON.stringify(activeTab));
+        console.log("getActiveTab: activeTab JSON string: " + JSON.stringify(activeTab));
         return activeTab;
       }
     })
@@ -61,9 +61,16 @@ function getActiveTab() {
   */
   /* message functions */
 
-function sendOneTimeMessage(obj){
-  // for single messages use the below Chrome messaging API
-  chrome.tabs.sendMessage(obj, callbackFunc);
+// for single messages use the below Chrome messaging API
+function sendOneTimeMessage(message){
+  // chrome.tabs.sendMessage required parameters: tabId, message
+  // optional parameters: options, callback func
+  if (message.context === "onUpdatedTab"){
+    chrome.tabs.sendMessage(message.info.tabId, message.info);
+  }
+  if (message.context === "contextMenuItem"){
+    chrome.tabs.sendMessage(message.info.tabId, message.info);
+  }
 }
 
 // long-lived messaging connection
@@ -81,52 +88,92 @@ function runPortMessagingConnection(obj) {
       console.error('port.onMessage response=',response);
     });*/
   }
-};
+}
 
 /* end: message functions */
 
 /* handler functions */
 
-function activatedTabHandler(activeTabInfo) {
-  console.log(`activeTabId: ${activeTabInfo.tabId}`);
-}
 
-function onUpdatedTabHandler(tabId, changeInfo, tab) {
-  console.log("Updated tab: " + tabId);
-  console.log("tab object from chrome api: " + tab);
-  console.log("Updated tab url: " + tab.url);
-  console.log("changedInfo for tab: " + changeInfo);
-}
-
-function onDragEventHandler(event){
-  let selectedText = event.getSelection().toString;
-  console.log("selected text: " + selectedText);
+function onUpdatedTab(tabId, changeInfo, tab) {
+  if (tab){
+    // console.log("onUpdatedTab: tabObj: " + JSON.stringify(tabObj));
+    let message = {
+      context: "onUpdatedTab",
+      info: {
+        action: "textSelectionListener",
+        highlightColor: null,
+        onClickContextMenus: null,
+        tabId: tabId,
+        tab: tab,
+        changeInfo: changeInfo
+      }
+    }
+    sendOneTimeMessage(message);
+  };
 }
 
 
 /* info object passed when contextMenu item is clicked
+  callback parameters include: (info: OnClickData, tab?: tabs.Tab)
   info = { // of these the menuItemId is required
       menuItemId: string or int: the ID of the menu item that was clicked,
       pageUrl: string: The URL of the page where the menu item was clicked. This property is not set if the click occured in a context where there is no current page, such as in a launcher context menu.,
       selectionText: string: The text for the context selection, if any.,
       srcUrl: string: Will be present for elements with a 'src' URL.
     } */
-function contextMenusHandler(info, tab) {
-  console.log("contextMenuesHandler: menuItemId: " + info.menuItemId);
+function onClickContextMenus(info, tab) {
   if (highlightColorChoices.includes(info.menuItemId)) {
-    sendOneTimeMessage({
-      action: actions.highlightSelectedText,
-      highlightColor: info.menuItemId,
-      tabUrl: tab.url,
-      tabTitle: tab.title,
-    });
+    let message = {
+      context: "contextMenuItem",
+      info: {
+        action: actions.highlightSelectedText,
+        highlightColor: info.menuItemId,
+        onClickDataContextMenu: info,
+        tabId: tab.id,
+        tab: tab,
+        changeInfo: null
+      }
+    }
+    sendOneTimeMessage(message);
   }
 }
 
 // callback function for context menu create functions
 // if error occured, chrome.runtime.lastError will include it
-function contextMenusCreateCallbackHandler() {
+function contextMenusCreateCallback() {
   console.log("context menu create error: " + chrome.runtime.lastError);
+}
+
+function createContextMenus(){
+  // context menu create takes two parameters (menuItemProperties, callbackHandler)
+  // these menu items will only show in the context menu with the context of selection of text
+  chrome.contextMenus.create({
+    id: "yellow",
+    title: "yellow", // (Ctrl-Shift-Y)",
+    type: "normal",
+    contexts: ["selection"],
+  },
+  contextMenusCreateCallback
+  );
+
+  chrome.contextMenus.create({
+      id: "red",
+      title: "red", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
+  );
+
+  chrome.contextMenus.create({
+      id: "grey",
+      title: "grey", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
+  );
 }
 
 /* end: handler functions */
@@ -136,43 +183,15 @@ function contextMenusCreateCallbackHandler() {
 // chrome.tabs.onActivated.addListener(activatedTabHandler);
 
 // listening for a new tab opened or to a new URL typed in a tab
-chrome.tabs.onUpdated.addListener(onUpdatedTabHandler);
+chrome.tabs.onUpdated.addListener(onUpdatedTab);
 
 // on drag end listener
 // chrome.event.addListener('dragend', onDragEventHandler); 
 
 // context menu listener
-chrome.contextMenus.onClicked.addListener(contextMenusHandler);
+// callback parameters include: (info: OnClickData, tab?: tabs.Tab)
+chrome.contextMenus.onClicked.addListener(onClickContextMenus);
 
-chrome.runtime.onInstalled.addListener(function() {
-  // context menu create takes two parameters (menuItemProperties, callbackHandler)
-  // these menu items will only show in the context menu with the context of selection of text
-  chrome.contextMenus.create({
-      id: "yellow",
-      title: "yellow", // (Ctrl-Shift-Y)",
-      type: "normal",
-      contexts: ["selection"],
-    },
-    contextMenusCreateCallbackHandler
-  );
-
-  chrome.contextMenus.create({
-      id: "red",
-      title: "red", // (Ctrl-Shift-Y)",
-      type: "normal",
-      contexts: ["selection"],
-    },
-    contextMenusCreateCallbackHandler
-  );
-
-  chrome.contextMenus.create({
-      id: "grey",
-      title: "grey", // (Ctrl-Shift-Y)",
-      type: "normal",
-      contexts: ["selection"],
-    },
-    contextMenusCreateCallbackHandler
-  );
-});
+chrome.runtime.onInstalled.addListener(createContextMenus);
 
 /* end: listeners */
