@@ -14,7 +14,7 @@ const highlightColorChoices = [
   "white",
   "grey",
 ];
-const actions = {highlightSelectedText: "highlight-selected-text"};
+const actions = { highlightSelectedText: "highlight-selected-text" };
 
 /* end of global variable declarations */
 
@@ -27,17 +27,20 @@ the active tab is the one selected in a window
 lastFocusedWindow is the window that is being viewed (the one 'on top' of other application windows)
 */
 function getActiveTab() {
-  let queryOptions = {lastFocusedWindow: true, active: true };
+  let queryOptions = { lastFocusedWindow: true, active: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`
-  let tabQueryPromise = chrome.tabs.query(queryOptions);  // chrome.tabs.query returns a Promise object
-  tabQueryPromise.then((activeTab) => {
-      if (activeTab){
-        console.log("getActiveTab: activeTab JSON string: " + JSON.stringify(activeTab));
+  let tabQueryPromise = chrome.tabs.query(queryOptions); // chrome.tabs.query returns a Promise object
+  tabQueryPromise
+    .then((activeTab) => {
+      if (activeTab) {
+        console.log(
+          "getActiveTab: activeTab JSON string: " + JSON.stringify(activeTab)
+        );
         return activeTab;
       }
     })
-    .catch(err => {
-      console.log("in getActiveTab: error: " + err)
+    .catch((err) => {
+      console.log("in getActiveTab: error: " + err);
     });
 }
 
@@ -59,16 +62,16 @@ function getActiveTab() {
   per window, only one tab will ever be `active`
 
   */
-  /* message functions */
+/* message functions */
 
 // for single messages use the below Chrome messaging API
-function sendOneTimeMessage(message){
+function sendOneTimeMessage(message) {
   // chrome.tabs.sendMessage required parameters: tabId, message
   // optional parameters: options, callback func
-  if (message.context === "onUpdatedTab"){
+  if (message.context === "onUpdatedTab") {
     chrome.tabs.sendMessage(message.info.tabId, message.info);
   }
-  if (message.context === "contextMenuItem"){
+  if (message.context === "contextMenuItem") {
     chrome.tabs.sendMessage(message.info.tabId, message.info);
   }
 }
@@ -94,25 +97,23 @@ function runPortMessagingConnection(obj) {
 
 /* handler functions */
 
-
 function onUpdatedTab(tabId, changeInfo, tab) {
-  if (tab){
+  if (tab) {
     // console.log("onUpdatedTab: tabObj: " + JSON.stringify(tabObj));
     let message = {
       context: "onUpdatedTab",
       info: {
-        action: "textSelectionListener",
+        action: null,
         highlightColor: null,
         onClickContextMenus: null,
         tabId: tabId,
         tab: tab,
-        changeInfo: changeInfo
-      }
-    }
+        changeInfo: changeInfo,
+      },
+    };
     sendOneTimeMessage(message);
-  };
+  }
 }
-
 
 /* info object passed when contextMenu item is clicked
   callback parameters include: (info: OnClickData, tab?: tabs.Tab)
@@ -132,9 +133,9 @@ function onClickContextMenus(info, tab) {
         onClickDataContextMenu: info,
         tabId: tab.id,
         tab: tab,
-        changeInfo: null
-      }
-    }
+        changeInfo: null,
+      },
+    };
     sendOneTimeMessage(message);
   }
 }
@@ -145,19 +146,21 @@ function contextMenusCreateCallback() {
   console.log("context menu create error: " + chrome.runtime.lastError);
 }
 
-function createContextMenus(){
+function createContextMenus() {
   // context menu create takes two parameters (menuItemProperties, callbackHandler)
   // these menu items will only show in the context menu with the context of selection of text
-  chrome.contextMenus.create({
-    id: "yellow",
-    title: "yellow", // (Ctrl-Shift-Y)",
-    type: "normal",
-    contexts: ["selection"],
-  },
-  contextMenusCreateCallback
+  chrome.contextMenus.create(
+    {
+      id: "yellow",
+      title: "yellow", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
   );
 
-  chrome.contextMenus.create({
+  chrome.contextMenus.create(
+    {
       id: "red",
       title: "red", // (Ctrl-Shift-Y)",
       type: "normal",
@@ -166,7 +169,8 @@ function createContextMenus(){
     contextMenusCreateCallback
   );
 
-  chrome.contextMenus.create({
+  chrome.contextMenus.create(
+    {
       id: "grey",
       title: "grey", // (Ctrl-Shift-Y)",
       type: "normal",
@@ -186,7 +190,7 @@ function createContextMenus(){
 chrome.tabs.onUpdated.addListener(onUpdatedTab);
 
 // on drag end listener
-// chrome.event.addListener('dragend', onDragEventHandler); 
+// chrome.event.addListener('dragend', onDragEventHandler);
 
 // context menu listener
 // callback parameters include: (info: OnClickData, tab?: tabs.Tab)
