@@ -44,38 +44,56 @@ function searchDOM(searchString) {
   }
 }
 
+// called from highlightSelectedText
+function addSpanElementToDocument(spanElement) {
+  if(window.getSelection) {
+    let selection = window.getSelection();
+    if (selection.rangeCount) {
+      let selectedTextRange = selection.getRangeAt(0).cloneRange();
+      // surroundContents method moves the contents of the selected range into the new spanElement
+      // placing the new spanElement Node at the start of the range
+      // the new boundaries of the range include the new spanElement Node added
+      selectedTextRange.surroundContents(spanElement);
+      // removing the contents of the original selectedText range
+      selection.removeAllRanges();
+      // then adding the cloned contents with the new spanElement into the original selection
+      selection.addRange(selectedTextRange);
+    }
+  }
+}
+
 /* highlight the selection */
 
 function highlightSelectedText(request) {
+  // create a new span element with class annotation-highlight and 
+  // requested color from the context menu
+  let spanElement = document.createElement("span");
+  spanElement.className = "annotation-highlight";
+  spanElement.style.backgroundColor = highlightColor;
+
+  addSpanElementToDocument(spanElement);
+
   // this gets the highlighted/selected text anchor node from the window object
   // let selectedTextAnchorNode = window.getSelection().anchorNode;
-  let selectionObj = window.getSelection();
-  let selectedTextType = selectionObj.type;
-  let selectedTextRange = selectionObj.getRangeAt(0);
-  let selectedTextAnchorNode = selectionObj.anchorNode;
 
-  console.log(`selectectedTextType: ${selectedTextType} \n
-             selectedTextRange: ${selectedTextRange} \n
-             selectedTextAnchorNodeName: ${selectedTextAnchorNode.nodeName}`);
+  // let selectionObj = window.getSelection();
+  // let selectedTextType = selectionObj.type;
+  // let selectedTextRange = selectionObj.getRangeAt(0);
+  // let selectedTextAnchorNode = selectionObj.anchorNode;
+
+  // console.log(`selectectedTextType: ${selectedTextType} \n
+  //            selectedTextRange: ${selectedTextRange} \n
+  //            selectedTextAnchorNodeName: ${selectedTextAnchorNode.nodeName}`);
 
   // the onClickDataContextMenu obj in the request obj has a selectionText key
   // let selectedText = request.onClickDataContextMenu.selectionText;
 
-  // TODO: adding highlight to selected text
-  // let selectedTextColor = request.highlightColor;
-  // if (selectedText.length > 0) {
-  //   // console.log("highlightSelection func: your selection text: " + selectionText);
-  //   let highlightElement = document.createElement("span");
-  //   highlightElement.className = "sifter-highlight";
-  //   highlightElement.style.backgroundColor = selectedTextColor;
-  //   selectedTextAnchorNode.appendChild(highlightElement);
-  // }
 }
 
 /* messaging between background.js (service worker) and content-script.js */
 
 function oneTimeMessageReceiver(request, sender, sendResponse) {
-  console.log("request obj: " + JSON.stringify(request));
+  // console.log("request obj: " + JSON.stringify(request));
   // console.log("sender obj: " + JSON.stringify(sender));
 
   if (request.action === "highlight-selected-text") {
@@ -83,12 +101,12 @@ function oneTimeMessageReceiver(request, sender, sendResponse) {
   }
 }
 
-function longLivedPortMessageReceiver(request, sender, sendResponse) {
-  console.log("inside the contentScriptCallback");
-  if (request.action === "highlight-selected-text") {
-    highlightSelection();
-  }
-}
+// function longLivedPortMessageReceiver(request, sender, sendResponse) {
+//   console.log("inside the contentScriptCallback");
+//   if (request.action === "highlight-selected-text") {
+//     highlightSelection(request);
+//   }
+// }
 /* end of messaging callback functions */
 
 /* listeners */
