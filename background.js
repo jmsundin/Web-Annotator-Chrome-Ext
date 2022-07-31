@@ -51,8 +51,7 @@ const actions = {highlightSelectedText: "highlight-selected-text"};
 
 /* message functions */
 
-function sendMessageActiveTab(json) {
-  // currentWindow is that which code is executing
+// currentWindow is that which code is executing
   // if the currentWindow created many tabs or windows from a single HTML file,
   // the currentWindow will be the one that the original window where that HTML file
   // made the call to tabs.query
@@ -61,6 +60,7 @@ function sendMessageActiveTab(json) {
   // if the initial call created other windows that become the top-most or focused window
   // the queryOptions below will only retrieve one tab due to the two constraints
   // per window, only one tab will ever be `active`
+function sendMessageActiveTab(obj) {
   const queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tab) => {
     if (tab && tab.length > 0) {
@@ -70,10 +70,11 @@ function sendMessageActiveTab(json) {
       // for longer messaging, open a messaging port
       console.log("inside sendMessageActiveTab: tabUrl: " + tab.url);
       const port = chrome.tabs.connect(tab.id);
-      port.postMessage(json);
+      port.postMessage(obj);
       port.onDisconnect = (err) => {
         console.error("disconnected", err);
       };
+
       /*port.onMessage.addListener((response) => {
         console.error('port.onMessage response=',response);
       });*/
@@ -96,6 +97,12 @@ function onUpdatedTabHandler(tabId, changeInfo, tabInfo) {
   console.log("New tab Info: ");
   console.log(tabInfo);
 }
+
+function onDragEventHandler(event){
+  let selectedText = event.getSelection().toString;
+  console.log("selected text: " + selectedText);
+}
+
 
 /* info object passed when contextMenu item is clicked
   info = { // of these the menuItemId is required
@@ -131,37 +138,41 @@ chrome.tabs.onActivated.addListener(activatedTabHandler);
 // listening for a new tab opened or to a new URL typed in a tab
 chrome.tabs.onUpdated.addListener(onUpdatedTabHandler);
 
+// on drag end listener
+// chrome.event.addListener('dragend', onDragEventHandler); 
+
+// context menu listener
 chrome.contextMenus.onClicked.addListener(contextMenusHandler);
 
+chrome.runtime.onInstalled.addListener(function() {
+  // context menu create takes two parameters (menuItemProperties, callbackHandler)
+  // these menu items will only show in the context menu with the context of selection of text
+  chrome.contextMenus.create({
+      id: "yellow",
+      title: "yellow", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallbackHandler
+  );
+
+  chrome.contextMenus.create({
+      id: "red",
+      title: "red", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallbackHandler
+  );
+
+  chrome.contextMenus.create({
+      id: "grey",
+      title: "grey", // (Ctrl-Shift-Y)",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallbackHandler
+  );
+});
+
 /* end: listeners */
-
-// context menu create takes two parameters (menuItemProperties, callbackHandler)
-chrome.contextMenus.create(
-  {
-    id: "yellow",
-    title: "yellow", // (Ctrl-Shift-Y)",
-    type: "normal",
-    contexts: ["selection"],
-  },
-  contextMenusCreateCallbackHandler
-);
-
-chrome.contextMenus.create(
-  {
-    id: "red",
-    title: "red", // (Ctrl-Shift-Y)",
-    type: "normal",
-    contexts: ["selection"],
-  },
-  contextMenusCreateCallbackHandler
-);
-
-chrome.contextMenus.create(
-  {
-    id: "grey",
-    title: "grey", // (Ctrl-Shift-Y)",
-    type: "normal",
-    contexts: ["selection"],
-  },
-  contextMenusCreateCallbackHandler
-);

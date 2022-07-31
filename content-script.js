@@ -30,37 +30,22 @@ let notRemapped = [];
 //     const { url, urlTitle, tabWindowId } = obj;
 // });
 
+function getWindowWithSelection(wnd){
+    //alert('hasSelection:' + wnd);
+    if (wnd.getSelection().rangeCount > 0){
+        console.log('found selection:' + wnd.getSelection());
+        return wnd;
+    }
+    else
+        return null;
+}
+
 function contentScriptCallback(request, sender, sendResponse) {
   console.log("inside the contentScriptCallback");
   if (request.action === "highlight-selected-text") {
-    highlightSelection(wnd, color);
+    let wnd = getWindowWithSelection(window);
+    highlightSelection(wnd, request.color);
   }
-  // {
-  //   if (request.action === 'signedin')
-  //   {
-  //     if (!signedin)
-  //     {
-  //       signedin = true; // this avoids loops: we declare we're signed first
-  //       if (highlightswrapper)
-  //       {
-  //         setHighlightCaption('Yawas ➜ Refresh to view annotations');
-  //         highlightswrapper.style.display = 'block';
-  //       }
-  //     }
-  //   }
-  //   else if (request.action === 'yawas_next_highlight')
-  //     yawas_next_highlight();
-  //   else if (request.action === 'yawas_chrome')
-  //     yawas_chrome(request.color);
-  //   else if (request.action === 'yawas_delete_highlight')
-  //     yawas_delete_highlight();
-  // }
-  // if (sendResponse)
-  // {
-  //   //console.log('sending response to background page');
-  //   sendResponse({reponse:'ok'});
-  // }
-  // return true; // important in case we need sendResponse asynchronously
 }
 
 //chrome.runtime.onMessage.addListener(contentScriptRequestCallback);
@@ -87,8 +72,8 @@ function searchDOM(searchString) {
   }
 }
 
-console.log(textChunksWithSearchString);
-
+// console.log(textChunksWithSearchString);
+/*
 function dragElement(div) {
   let draggedDiv = div;
   let left = 0;
@@ -130,9 +115,12 @@ function dragElement(div) {
     document.removeEventListener("mousemove", elementDrag);
   }
 }
+*/
 
 /* highlight the selection */
-function highlightSelection(wnd, color, z) {
+
+/*
+function highlightSelection(wnd, color) {
   if (!wnd) return false;
   var nselections = wnd.getSelection().rangeCount;
   if (nselections === 0) return false;
@@ -183,22 +171,64 @@ function highlightSelection(wnd, color, z) {
     return false;
   }
 }
+*/
+
+function highlightDoc(wnd,doc,highlights)
+{
+    let previousRange = null;
+    if (wnd.getSelection().rangeCount > 0)
+      previousRange = wnd.getSelection().getRangeAt(0);
+    var scrollLeft = wnd.scrollX;
+    var scrollTop = wnd.scrollY;
+    nremapped = 0;
+    notRemapped = [];
+    yawas_uncompact(wnd,highlights);
+    for (var i=0;i<highlights.length;i++)
+    {
+        wnd.getSelection().removeAllRanges();
+        var selectionString = highlights[i].selection;
+        if (highlights[i].selection_unpacted)
+        	selectionString = highlights[i].selection_unpacted;
+        var n = 0;
+        while (n<highlights[i].n && wnd.find(selectionString,true,false))
+        {
+            n++;
+        }
+        if (n == highlights[i].n && wnd.find(selectionString,true,false))
+        {
+          try {
+            highlightNowFirefox22(wnd.getSelection().getRangeAt(0), highlights[i].color, forecolor, doc, highlights[i].selection, highlights[i].n,highlights[i].comment);
+            nremapped++;
+          }
+          catch(e){
+            console.error('error highlightNowFirefox22',e);
+          }
+        }
+        else
+          notRemapped.push(highlights[i]);
+    }
+    wnd.getSelection().removeAllRanges();
+    wnd.scrollTo(scrollLeft,scrollTop);
+    if (previousRange)
+      wnd.getSelection().addRange(previousRange);
+    return nremapped;
+}
 
 /* on right-click context menu handler */
-function onContextMenuHandler() {
-  if (hoverElement !== null) {
-    let selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      selection.removeAllRanges();
-    }
-    let range = document.createRange();
-    range.selectNode(hoverElement);
-    selection.addRange(range);
-  }
-}
+// function onContextMenuHandler() {
+//   if (hoverElement !== null) {
+//     let selection = window.getSelection();
+//     if (selection.rangeCount > 0) {
+//       selection.removeAllRanges();
+//     }
+//     let range = document.createRange();
+//     range.selectNode(hoverElement);
+//     selection.addRange(range);
+//   }
+// }
 
 /* window listener */
 
 // context menu global event callback function
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/contextmenu_event
-window.addEventListener("oncontextmenu", onContextMenuHandler);
+// window.addEventListener("oncontextmenu", onContextMenuHandler);

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "description": "Highlight paragraphs on web pages with different colors and store them for future use; search or revisit pages to retrieve the highlighted text.",
     "background": {
-      "service_worker": "./scripts/background.js"
+      "service_worker": "./background.js"
     },
     "content_scripts": [
       {
@@ -16,7 +16,7 @@
           "*://www.google.com/bookmarks/*",
           "*://accounts.google.com/*"
         ],
-        "js": ["./scripts/content-script.js"],
+        "js": ["./content-script.js"],
         "all_frames": true
       }
     ],
@@ -24,7 +24,7 @@
     "permissions": ["activeTab", "storage", "contextMenus", "tabs", "bookmarks"],
     "action": {
       "default_title": "Web-Annotator",
-      "default_popup": "index.html"
+      "default_popup": "./popup.html"
     },
     "commands": {
       "yellow": {
