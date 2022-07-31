@@ -8,7 +8,6 @@ const highlightColorChoices = [
 ];
 const actions = { highlightSelectedText: "highlight-selected-text" };
 
-
 /* ----------- getter functions ----------------- */
 
 function getActiveTab() {
@@ -27,9 +26,7 @@ function getActiveTab() {
 
 /* ----------- end of getter functions ---------- */
 
-
 /* message functions */
-
 
 function sendOneTimeMessage(message) {
   if (message.context === "onUpdatedTab") {
@@ -58,7 +55,6 @@ function runPortMessagingConnection(obj) {
 
 function onUpdatedTab(tabId, changeInfo, tab) {
   if (tab) {
-    
     let message = {
       context: "onUpdatedTab",
       info: {

@@ -16,11 +16,9 @@ let notRemapped = [];
 let highlightedElements = [];
 let textChunksWithSearchString = [];
 
-
 function getChromeExtensionAssets() {
   // chrome.runtime.getURL("./assets/file-name");
 }
-
 
 /* search functions */
 
@@ -34,7 +32,7 @@ function searchDOM(searchString) {
 }
 
 function addSpanElementToDocument(spanElement) {
-  if(window.getSelection) {
+  if (window.getSelection) {
     let selection = window.getSelection();
     if (selection.rangeCount) {
       let selectedTextRange = selection.getRangeAt(0).cloneRange();
@@ -64,7 +62,6 @@ function oneTimeMessageReceiver(request, sender, sendResponse) {
   }
 }
 /* end of messaging callback functions */
-
 
 /* listeners */
 
