@@ -44,6 +44,40 @@ function searchDOM(searchString) {
   }
 }
 
+// TODO: implement onSuccessGetAnnotationsForUrl callback func
+function getAnnotations(request){
+  chrome.storage.sync.get(
+    [request.url],
+     onSuccessGetAnnotationsForUrl);
+}
+
+/* saving annotation to chrome sync */
+// TODO: when is the best time to store annotations?
+// TODO: implement onSuccessSetAnnotationForUrl callback func
+function saveAnnotation(annotation){
+  let annotationUrl = annotation.url;
+  let annotationId = annotation.id;
+  chrome.storage.sync.set(JSON.stringify({
+    annotationUrl: annotationUrl,
+    annotationId: annotation
+  }), onSuccessSetAnnotationForUrl);
+}
+
+// TODO: implement updateAnnotation
+function updateAnnotation(request, annotation){
+  if (request.comment){
+    annotation.comment = request.comment;
+  }
+  if(request.color){
+    annotation.color = request.color;
+  }
+}
+
+
+function getUUID(){
+  return Date.now().toString();  // returns time since January 1, 1970 in milliseconds
+}
+
 // called from highlightSelectedText
 function addSpanElementToDocument(spanElement) {
   if(window.getSelection) {
@@ -68,10 +102,33 @@ function highlightSelectedText(request) {
   // create a new span element with class annotation-highlight and 
   // requested color from the context menu
   let spanElement = document.createElement("span");
+  spanElement.id = getUUID();  // id property is a string
   spanElement.className = "annotation-highlight";
   spanElement.style.backgroundColor = highlightColor;
+  spanElement.dataset.url = request.info.tab.url;
+  spanElement.dataset.comment = '';
 
   addSpanElementToDocument(spanElement);
+
+  // check if new spanElement was successfully added to DOM using the UUID of the element
+  // if successful, sync new annotation to storage
+  // TODO: add additional dataset data to new spanElement
+  /* let message = {  // this is the request object
+      context: "onUpdatedTab",
+      info: {
+        action: null,
+        highlightColor: null,
+        onClickContextMenus: null,
+        tabId: tabId,
+        tab: tab,
+        changeInfo: changeInfo,
+      },
+    };
+
+    */
+  if(document.getElementById(spanElement.id)){
+    saveAnnotation(spanElement);
+  }
 
   // this gets the highlighted/selected text anchor node from the window object
   // let selectedTextAnchorNode = window.getSelection().anchorNode;
