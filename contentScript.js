@@ -44,23 +44,36 @@ function searchDOM(searchString) {
   }
 }
 
-// TODO: implement onSuccessGetAnnotationsForUrl callback func
+
 function getAnnotations(request){
-  chrome.storage.sync.get(
-    [request.url],
-     onSuccessGetAnnotationsForUrl);
+  let activeTabUrl = request.url.toString();
+  return new Promise((resolve) => {
+    chrome.storage.sync.get([activeTabUrl], (result) => {
+      resolve("Annotations for active tab url: " + result.activeTabUrl);
+    });
+  });
 }
 
+fetchBookmarks = () => {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get([currentVideo], (obj) => {
+      resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
+    });
+  });
+};
+
+
 /* saving annotation to chrome sync */
-// TODO: when is the best time to store annotations?
-// TODO: implement onSuccessSetAnnotationForUrl callback func
-function saveAnnotation(annotation){
-  let annotationUrl = annotation.url;
-  let annotationId = annotation.id;
-  chrome.storage.sync.set(JSON.stringify({
-    annotationUrl: annotationUrl,
-    annotationId: annotation
-  }), onSuccessSetAnnotationForUrl);
+function saveAnnotation(spanElement){
+  let annotationUrl = spanElement.dataset.url;
+  let annotationId = spanElement.id;
+  chrome.storage.sync.set({
+    [annotationUrl]: {
+      [annotationId]: JSON.stringify(spanElement)
+    }
+  }, (result) => {
+    alert("Annotation saved: " + result.annotationUrl);
+  });
 }
 
 // TODO: implement updateAnnotation
@@ -112,21 +125,8 @@ function highlightSelectedText(request) {
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
-  // TODO: add additional dataset data to new spanElement
-  /* let message = {  // this is the request object
-      context: "onUpdatedTab",
-      info: {
-        action: null,
-        highlightColor: null,
-        onClickContextMenus: null,
-        tabId: tabId,
-        tab: tab,
-        changeInfo: changeInfo,
-      },
-    };
-
-    */
   if(document.getElementById(spanElement.id)){
+    highlightedElements.push(spanElement);  // global value of highlighted elements for a session
     saveAnnotation(spanElement);
   }
 
@@ -156,6 +156,10 @@ function oneTimeMessageReceiver(request, sender, sendResponse) {
   if (request.action === "highlight-selected-text") {
     highlightSelectedText(request);
   }
+  if (request.action === "get-annotations"){
+    alert(await getAnnotations(request));
+  }
+
 }
 
 // function longLivedPortMessageReceiver(request, sender, sendResponse) {
