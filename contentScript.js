@@ -7,8 +7,6 @@
 // let signedin = false;
 let forecolor = "#000000";
 let currentColor = "yellow";
-let hoverColor = "lightgray"; //'pink'
-let hoverElement = null;
 let lastHighlight = null;
 let leftMark = "<<"; //'&ldquo;'
 let rightMark = ">>"; //'&rdquo;'
@@ -21,6 +19,9 @@ googleColors["green"] = "#99ff99";
 googleColors["white"] = "transparent";
 let notRemapped = [];
 
+let annotationPopover = null;
+let hoverColor = "lightgray"; //'pink'
+let hoverElement = null;
 // highlighted elements in page
 let highlightedElements = [];
 
@@ -47,6 +48,146 @@ function searchDOM(searchString) {
 function getUUID() {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
+
+function dragElement(div) {
+  let draggedDiv = div;
+  let left = 0;
+  let top = 0;
+  draggedDiv
+    .querySelector("#dragheader")
+    .addEventListener("mousedown", dragMouseDown);
+
+  function dragMouseDown(event) {
+    event.preventDefault();
+    let rect = draggedDiv.getBoundingClientRect();
+    left = event.clientX - rect.left;
+    top = event.clientY - rect.top;
+    document.addEventListener("mouseup", closeDragElement);
+    document.addEventListener("mousemove", elementDrag);
+  }
+
+  function elementDrag(event) {
+    event.preventDefault();
+    let x = event.clientX;
+    let y = event.clientY;
+    draggedDiv.style.right = "unset";
+    draggedDiv.style.bottom = "unset";
+    let draggedWidth = draggedDiv.offsetWidth + 24;
+    let draggedHeight = draggedDiv.offsetHeight + 8;
+    let newleft = x - left;
+    let newtop = y - top;
+    if (newleft < 8) newleft = 8;
+    if (newleft > window.innerWidth - draggedWidth)
+      newleft = window.innerWidth - draggedWidth;
+    if (newtop < 8) newtop = 8;
+    if (newtop > window.innerHeight - draggedHeight)
+      newtop = window.innerHeight - draggedHeight;
+    draggedDiv.style.left = newleft + "px";
+    draggedDiv.style.top = newtop + "px";
+  }
+  function closeDragElement(event) {
+    document.removeEventListener("mouseup", closeDragElement);
+    document.removeEventListener("mousemove", elementDrag);
+  }
+}
+
+function createAnnotationPopover() {
+  if (annotationPopover === null) {
+    annotationPopover = document.createElement("div");
+    annotationPopover.id = "annotationPopover";
+    annotationPopover.style.width = "400px";
+    annotationPopover.style.height = "300px";
+    annotationPopover.style.userSelect = "none";
+    annotationPopover.style.display = "block";
+    annotationPopover.style.position = "fixed";
+    annotationPopover.style.zIndex = 200000;
+    annotationPopover.style.margin = "0px";
+    annotationPopover.style.userSelect = "none";
+    annotationPopover.style.fontFamily = '"avenir next",Helvetica';
+    annotationPopover.style.right = "8px";
+    annotationPopover.style.bottom = "8px";
+    annotationPopover.style.borderRadius = "8px";
+    annotationPopover.style.boxShadow = "0 0 2px black";
+    annotationPopover.style.color = "black";
+    annotationPopover.textContent = "";
+    annotationPopover.style.textAlign = "center";
+    //annotationPopover.style.cursor = 'pointer';
+
+    annotationPopover.style.fontSize = "14px";
+    annotationPopover.style.fontWeight = "bold";
+    annotationPopover.style.color = "black";
+    annotationPopover.style.backgroundColor = "#E3E3E3";
+    //annotationPopover.style.borderRadius = '32px';
+    annotationPopover.style.padding = "8px 16px";
+
+    let dragheaderPopover = document.createElement("div");
+    dragheaderPopover.id = "dragheader";
+    dragheaderPopover.style.textAlign = "center";
+    dragheaderPopover.style.cursor = "move";
+    dragheaderPopover.style.fontSize = "16px";
+    dragheaderPopover.style.backgroundColor = "#C8CACB";
+    dragheaderPopover.textContent = "Sifter Annotator";
+    annotationPopover.appendChild(dragheaderPopover);
+    var annotationPopoverCaption = document.createElement("div");
+    annotationPopoverCaption.addEventListener("mousedown", (event) =>
+      sifterNextHighlight(event)
+    );
+    annotationPopoverCaption.title = "Click to navigate in highlights";
+    annotationPopoverCaption.id = "annotationPopoverCaption";
+    annotationPopoverCaption.style.cursor = "pointer";
+    annotationPopoverCaption.style.userSelect = "none";
+    annotationPopoverCaption.style.webkitUserSelect = "none";
+    annotationPopoverCaption.textContent = "";
+    annotationPopover.appendChild(annotationPopoverCaption);
+
+    // var highlightsnotfound = document.createElement('div');
+    // highlightsnotfound.style.color = '#a22';
+    // highlightsnotfound.style.cursor = 'pointer';
+    // highlightsnotfound.addEventListener('click',showNotFound);
+    // highlightsnotfound.title = 'Click to show missing highlights';
+    // highlightsnotfound.id = 'highlightsnotfound';
+    // annotationPopover.appendChild(highlightsnotfound);
+
+    // var highlightsnotfoundtext = document.createElement('div');
+    // highlightsnotfoundtext.style.color = '#a22';
+    // highlightsnotfoundtext.style.display = 'none';
+    // highlightsnotfoundtext.id = 'highlightsnotfoundtext';
+    // annotationPopover.appendChild(highlightsnotfoundtext);
+
+    /*var charactersleft = document.createElement('div');
+    charactersleft.style.color = '#000';
+    charactersleft.style.fontSize = '11px';
+    charactersleft.style.cursor = 'pointer';
+    charactersleft.title = 'Number of total characters used for this page in Google Bookmarks, out of 2048 possible';
+    charactersleft.addEventListener('click',function () { alert(charactersUsed + ' characters used out of 2048 allowed by Google Bookmarks for this page')},false);
+    charactersleft.style.display = 'block';
+    charactersleft.id = 'charactersleft';
+    annotationPopover.appendChild(charactersleft);*/
+
+    let close = document.createElement("div");
+    close.textContent = "✕";
+    close.style.position = "absolute";
+    close.style.top = 0;
+    close.style.left = 0;
+    close.style.margin = "4px";
+    close.style.fontSize = "12px";
+    close.style.padding = "4px";
+    close.style.color = "black";
+    close.backgroundColor = "#C8CACB";
+    close.style.cursor = "pointer";
+    close.addEventListener(
+      "click",
+      function () {
+        annotationPopover.style.display = "none";
+      },
+      false
+    );
+    annotationPopover.appendChild(close);
+    document.body.appendChild(annotationPopover);
+    dragElement(annotationPopover);
+  }
+}
+
 
 // called from highlightSelectedText
 function addSpanElementToDocument(spanElement) {
@@ -77,7 +218,9 @@ function highlightSelectedText(annotationObj) {
   spanElement.style.backgroundColor = annotationObj.info.highlightColor;
   spanElement.dataset.url = annotationObj.info.tab.url;
   spanElement.dataset.comment = "";
-  console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
+  console.log(
+    `inside highlightSelectedText spanElement: ${spanElement.toString()}`
+  );
   addSpanElementToDocument(spanElement);
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
@@ -104,6 +247,27 @@ function highlightSelectedText(annotationObj) {
   // let selectedText = request.onClickDataContextMenu.selectionText;
 }
 
+function sifterNextHighlight(event) {
+  // prevent text selection
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  var highlights = document.getElementsByClassName("annotation-highlight");
+  if (highlights.length == 0) return;
+  currentHighlight = currentHighlight % highlights.length;
+  // updateAnnotationPopoverCaption();
+  let h = highlights[currentHighlight];
+  h.style.transition = "opacity 0.3s ease-in-out";
+  h.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+  h.style.opacity = 0.2;
+  currentHighlight += 1;
+  setTimeout(function () {
+    h.style.opacity = 1.0;
+  }, 300);
+}
+
 /* messaging between background.js (service worker) and content-script.js */
 
 // TODO: implement
@@ -112,17 +276,17 @@ function highlightSelectedText(annotationObj) {
 //               request obj: ${JSON.stringify(request)}
 //               sender obj: ${JSON.stringify(sender)}`);
 
-  // if (request.context === "onClickContextMenuItem"){
-  //   if (request.info.action === "highlight-selected-text") {
-  //     highlightSelectedText(request);
-  //   }
-  // }
-  // if (request.context === "onUpdatedTabCallback-status-complete"){
-  //   // TODO: implement in when this is the context from background.js
-  // }
-  // if (request.action === "get-annotations"){
-  //   alert(await getAnnotations(request));
-  // }
+// if (request.context === "onClickContextMenuItem"){
+//   if (request.info.action === "highlight-selected-text") {
+//     highlightSelectedText(request);
+//   }
+// }
+// if (request.context === "onUpdatedTabCallback-status-complete"){
+//   // TODO: implement in when this is the context from background.js
+// }
+// if (request.action === "get-annotations"){
+//   alert(await getAnnotations(request));
+// }
 // }
 
 function longLivedPortMessageReceiver(request, sender, sendResponse) {
@@ -152,7 +316,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(`in contentScript chrome.runtime.onMessage Listener:
               request obj: ${JSON.stringify(message)}
               sender obj: ${JSON.stringify(sender)}`);
-              /*
+  /*
               request obj: {
                 "context":"onClickContextMenuItem",
                 "info":{
@@ -196,6 +360,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               */
 
   highlightSelectedText(message);
+  createAnnotationPopover();
 });
 
 // long-lived message port connection
