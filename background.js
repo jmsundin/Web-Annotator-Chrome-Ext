@@ -163,7 +163,7 @@ function onUpdatedTabCallback(tabId, changeInfo, tab) {
           highlightColor: null,
           onClickContextMenus: null,
           tab: tab,
-        }
+        },
       };
       // if (message){
       //   console.log(`onUpdatedTabCallback: after message obj creation
@@ -209,16 +209,15 @@ function onClickContextMenusCallback(onClickData, tab) {
     console.log(`in onClickContextMenusCallback
                 annotationObj: ${JSON.stringify(annotationObj)}`);
     // sendOneTimeMessage(annotationObj);
-      // `tab` will either be a `tabs.Tab` instance or `undefined`
-      chrome.tabs.query({ active: true , currentWindow: true }, (tabs) => {
-          let activeTab = tabs[0];
-          chrome.tabs.sendMessage(activeTab.id, annotationObj, (response) => {
-              console.log(`response: ${JSON.stringify(response)}`);
+    // `tab` will either be a `tabs.Tab` instance or `undefined`
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      let activeTab = tabs[0];
+      chrome.tabs.sendMessage(activeTab.id, annotationObj, (response) => {
+        console.log(`response: ${JSON.stringify(response)}`);
       });
     });
   }
 }
-
 
 // callback function for context menu create functions
 // if error occured, chrome.runtime.lastError will include it
