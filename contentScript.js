@@ -44,56 +44,13 @@ function searchDOM(searchString) {
   }
 }
 
-
-function getAnnotations(request){
-  let activeTabUrl = request.url.toString();
-  return new Promise((resolve) => {
-    chrome.storage.sync.get([activeTabUrl], (result) => {
-      resolve("Annotations for active tab url: " + result.activeTabUrl);
-    });
-  });
-}
-
-fetchBookmarks = () => {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get([currentVideo], (obj) => {
-      resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
-    });
-  });
-};
-
-
-/* saving annotation to chrome sync */
-function saveAnnotation(spanElement){
-  let annotationUrl = spanElement.dataset.url;
-  let annotationId = spanElement.id;
-  chrome.storage.sync.set({
-    [annotationUrl]: {
-      [annotationId]: JSON.stringify(spanElement)
-    }
-  }, (result) => {
-    alert("Annotation saved: " + result.annotationUrl);
-  });
-}
-
-// TODO: implement updateAnnotation
-function updateAnnotation(request, annotation){
-  if (request.comment){
-    annotation.comment = request.comment;
-  }
-  if(request.color){
-    annotation.color = request.color;
-  }
-}
-
-
-function getUUID(){
-  return Date.now().toString();  // returns time since January 1, 1970 in milliseconds
+function getUUID() {
+  return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
 // called from highlightSelectedText
 function addSpanElementToDocument(spanElement) {
-  if(window.getSelection) {
+  if (window.getSelection) {
     let selection = window.getSelection();
     if (selection.rangeCount) {
       let selectedTextRange = selection.getRangeAt(0).cloneRange();
@@ -111,23 +68,24 @@ function addSpanElementToDocument(spanElement) {
 
 /* highlight the selection */
 
-function highlightSelectedText(request) {
-  // create a new span element with class annotation-highlight and 
+function highlightSelectedText(annotationObj) {
+  // create a new span element with class annotation-highlight and
   // requested color from the context menu
   let spanElement = document.createElement("span");
-  spanElement.id = getUUID();  // id property is a string
+  spanElement.id = getUUID(); // id property is a string
   spanElement.className = "annotation-highlight";
-  spanElement.style.backgroundColor = highlightColor;
-  spanElement.dataset.url = request.info.tab.url;
-  spanElement.dataset.comment = '';
-
+  spanElement.style.backgroundColor = annotationObj.info.highlightColor;
+  spanElement.dataset.url = annotationObj.info.tab.url;
+  spanElement.dataset.comment = "";
+  console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   addSpanElementToDocument(spanElement);
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
-  if(document.getElementById(spanElement.id)){
-    highlightedElements.push(spanElement);  // global value of highlighted elements for a session
-    saveAnnotation(spanElement);
+  if (document.getElementById(spanElement.id)) {
+    highlightedElements.push(spanElement); // global value of highlighted elements for a session
+    // TODO: send message to background.js to save annotation to Chrome sync storage
+    // saveAnnotation(spanElement);
   }
 
   // this gets the highlighted/selected text anchor node from the window object
@@ -144,30 +102,35 @@ function highlightSelectedText(request) {
 
   // the onClickDataContextMenu obj in the request obj has a selectionText key
   // let selectedText = request.onClickDataContextMenu.selectionText;
-
 }
 
 /* messaging between background.js (service worker) and content-script.js */
 
-function oneTimeMessageReceiver(request, sender, sendResponse) {
-  // console.log("request obj: " + JSON.stringify(request));
-  // console.log("sender obj: " + JSON.stringify(sender));
+// TODO: implement
+// function oneTimeMessageReceiver(request, sender, sendResponse) {
+//   console.log(`in oneTimeMessageReceiver contentScript:
+//               request obj: ${JSON.stringify(request)}
+//               sender obj: ${JSON.stringify(sender)}`);
 
+  // if (request.context === "onClickContextMenuItem"){
+  //   if (request.info.action === "highlight-selected-text") {
+  //     highlightSelectedText(request);
+  //   }
+  // }
+  // if (request.context === "onUpdatedTabCallback-status-complete"){
+  //   // TODO: implement in when this is the context from background.js
+  // }
+  // if (request.action === "get-annotations"){
+  //   alert(await getAnnotations(request));
+  // }
+// }
+
+function longLivedPortMessageReceiver(request, sender, sendResponse) {
+  console.log("inside the contentScriptCallback");
   if (request.action === "highlight-selected-text") {
     highlightSelectedText(request);
   }
-  if (request.action === "get-annotations"){
-    alert(await getAnnotations(request));
-  }
-
 }
-
-// function longLivedPortMessageReceiver(request, sender, sendResponse) {
-//   console.log("inside the contentScriptCallback");
-//   if (request.action === "highlight-selected-text") {
-//     highlightSelection(request);
-//   }
-// }
 /* end of messaging callback functions */
 
 /* listeners */
@@ -176,11 +139,76 @@ function oneTimeMessageReceiver(request, sender, sendResponse) {
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/contextmenu_event
 
 /* message listeners */
-// one time messaging listener
-chrome.runtime.onMessage.addListener(oneTimeMessageReceiver);
+
+// chrome.tabs.onMessage listens for other content scripts sending messages to this content script
+// chrome.tabs.onMessage.addListener(function(message, sender, sendResponse){
+//   console.log(`in contentScript chrome.tabs.onMessage Listener:
+//               request obj: ${JSON.stringify(message)}
+//               sender obj: ${JSON.stringify(sender)}`);
+// });
+
+// one time messaging listener for extension processes sending messages to this content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log(`in contentScript chrome.runtime.onMessage Listener:
+              request obj: ${JSON.stringify(message)}
+              sender obj: ${JSON.stringify(sender)}`);
+              /*
+              request obj: {
+                "context":"onClickContextMenuItem",
+                "info":{
+                  "action":"highlight-selected-text",
+                  "highlightColor":"yellow",
+                  "onClickDataContextMenu":{
+                    "editable":false,
+                    "frameId":0,
+                    "menuItemId":"yellow",
+                    "pageUrl":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
+                    "selectionText":"Sending a request from the extension to a content script looks very similar"},
+                    "tab":{
+                      "active":true,
+                      "audible":false,
+                      "autoDiscardable":true,
+                      "discarded":false,
+                      "favIconUrl":"https://developer.chrome.com/images/meta/favicon-32x32.png",
+                      "groupId":-1,
+                      "height":734,
+                      "highlighted":true,
+                      "id":1374,
+                      "incognito":false,
+                      "index":4,
+                      "mutedInfo":{
+                        "muted":false
+                      },
+                      "pinned":false,
+                      "selected":true,
+                      "status":"complete",
+                      "title":"Message passing - Chrome Developers",
+                      "url":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
+                      "width":1440,
+                      "windowId":681
+                    }
+                  }
+                }
+              sender obj: {
+                "id":"mohidjhnipldcfhkbolgoggbbemaljih",
+                "origin":"null"
+              }
+              */
+
+  highlightSelectedText(message);
+});
 
 // long-lived message port connection
-chrome.runtime.onConnect.addListener((port) => {
-  port.onMessage.addListener(longLivedPortMessageReceiver);
-});
+// chrome.runtime.onConnect.addListener((port) => {
+//   port.onMessage.addListener(longLivedPortMessageReceiver);
+// });
 /* end of message listeners */
+
+// sending messages from contentScript
+chrome.runtime.sendMessage(
+  (message = { action: "load-annotations-from-chrome-storage" }),
+  function callbackResponse(response) {
+    console.log(`in contentScript chrome.runtime.sendMessage:
+              response obj: ${JSON.stringify(response)}`);
+  }
+);

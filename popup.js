@@ -7,22 +7,33 @@ in the background.js service worker script, which handles the events on the web 
 This popup.js script handles the events on the Chrome extension popup: popup.html
 */
 
+let activeTab = null;
+let annotationTestText = document.getElementById("annotation-test-text");
+let annotationTestComment = document.getElementById("annotation-test-comment");
+
+const searchButton = document.getElementById("search-button");
+const searchInput = document.getElementById("search-input");
+
+// async function getActiveTab() {
+//   const tabs = await chrome.tabs.query({
+//     currentWindow: true,
+//     active: true,
+//   });
+//   activeTab = tabs[0];
+//   return activeTab;
+// }
+
 // listener attached to document object waiting for the DOMContentLoadead event
-// document.addEventListener('DOMContentLoaded', async () => {
-//     await chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-//         chrome.tabs.sendMessage(tabs[0].id, {action: "get-annotations"}, function(response) {
-//           console.log(JSON.stringify(response));
-//         });
-//       });
+// TODO: implement the callback
+// document.addEventListener("DOMContentLoaded", async () => {
+//   activeTab = getActiveTab();
 // });
 
 /* basic search with no autocomplete */
-const searchButton = document.getElementById('search-button');
-const searchInput = document.getElementById('search-input');
-
-searchInput.addEventListener('onkeypress', (event) => {
-    // chrome.runtime.sendMessage({"from-popup": searchDOM, "eventObj": event});
-});
+// TODO: implement callback
+// searchInput.addEventListener('onkeypress', (event) => {
+//     // chrome.runtime.sendMessage({"from-popup": searchDOM, "eventObj": event});
+// });
 
 /*
 // searchInput.addEventListener('enter', (event) => {
@@ -35,7 +46,7 @@ searchInput.addEventListener('onkeypress', (event) => {
 
 */
 /* autocomplete search */
-/*
+
 // const search_autocomplete = document.querySelector('#search-autocomplete');
 // let search_input_string = search_autocomplete.innerHTML;
 
@@ -53,8 +64,6 @@ searchInput.addEventListener('onkeypress', (event) => {
 //   filter: dataFilter
 // });
 
-*/
-
 /* end of autocomplete search box */
 
 // to get the background.js service worker `window` object call this function below from the chrome API
@@ -62,10 +71,48 @@ searchInput.addEventListener('onkeypress', (event) => {
 //     console.log(background_service_worker_window);
 // });
 
+// let searchButton = document.getElementById('searchChromeBookmarks');
+// searchButton.addEventListener('click', () => {
+//   chrome.tabs.create({url:chrome.extension.getURL('localsearch.html')})
+//   window.close()
+// });
+
 /* message handlers */
-function oneTimeMessageReceiver(request, sender, sendResponse) {
-    
-  }
+// function oneTimeMessageReceiver(message, sender, sendResponse) {
+//   if (message.context === "contextMenuItem") {
+//     annotationTestText.textContent =
+//       message.info.onClickDataContextMenu.selectionText;
+//     annotationTestComment.textContent =
+//       message.info.onClickDataContextMenu.pageUrl;
+//   }
+// }
+
+// chrome.runtime.onMessage.addListener(async function requestCallback(
+//   request,
+//   sender,
+//   sendResponse
+// ) {
+//   if (request.context === "contextMenuItem") {
+//     if (request.error) {
+//     } else {
+//       annotationTestText.textContent =
+//         request.onClickDataContextMenu.selectionText;
+//       annotationTestComment = "test comment";
+//     }
+//   }
+// });
+
+// send message to background.js to get annotations from storage for the visited URL and highlight the page
+// if (activeTab) {
+//   chrome.tabs.sendMessage(
+//     activeTab.id,
+//     { action: "get-annotations-from-chrome-storage" },
+//     responseCallback
+//   );
+// }
 
 /* message listeners */
-chrome.runtime.onMessage.addListener(oneTimeMessageReceiver);
+// popup.js is an extension process, and thus uses the chrome.runtime API
+// the background.js service worker and the content script use the chrome.tabs API to send and receive messages
+// TODO: implement listener
+// chrome.runtime.onMessage.addListener(oneTimeMessageReceiver);
