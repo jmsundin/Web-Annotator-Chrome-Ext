@@ -16,7 +16,7 @@
           "*://www.google.com/bookmarks/*",
           "*://accounts.google.com/*"
         ],
-        "js": ["./content-script.js"],
+        "js": ["./contentScript.js"],
         "all_frames": true
       }
     ],

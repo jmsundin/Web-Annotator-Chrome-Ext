@@ -1,26 +1,41 @@
 /*
-This index.js is the Chrome extension popup script that reads the global variables
+This popup.js is the Chrome extension popup script that reads the global variables
 in the background.js service worker script, which handles the events on the web page
 */
 
 /*
-This index.js script handles the events on the Chrome extension popup: index.html
+This popup.js script handles the events on the Chrome extension popup: popup.html
 */
 
+let activeTab = null;
+let annotationTestText = document.getElementById("annotation-test-text");
+let annotationTestComment = document.getElementById("annotation-test-comment");
+
+const searchButton = document.getElementById("search-button");
+const searchInput = document.getElementById("search-input");
+
+// async function getActiveTab() {
+//   const tabs = await chrome.tabs.query({
+//     currentWindow: true,
+//     active: true,
+//   });
+//   activeTab = tabs[0];
+//   return activeTab;
+// }
+
 // listener attached to document object waiting for the DOMContentLoadead event
-
-// document.addEventListener('DOMContentLoaded', async () => {
-
+// TODO: implement the callback
+// document.addEventListener("DOMContentLoaded", async () => {
+//   activeTab = getActiveTab();
 // });
 
 /* basic search with no autocomplete */
-// const searchButton = document.getElementById('search-button');
-// const searchInput = document.getElementById('search-input');
-
+// TODO: implement callback
 // searchInput.addEventListener('onkeypress', (event) => {
-//     chrome.runtime.sendMessage({"fromIndexPopup": searchDOM, "eventObj": event});
+//     // chrome.runtime.sendMessage({"from-popup": searchDOM, "eventObj": event});
 // });
 
+/*
 // searchInput.addEventListener('enter', (event) => {
 //     searchDOM(event.value);
 // });
@@ -29,7 +44,9 @@ This index.js script handles the events on the Chrome extension popup: index.htm
 //     searchDOM(event.value);
 // });
 
+*/
 /* autocomplete search */
+
 // const search_autocomplete = document.querySelector('#search-autocomplete');
 // let search_input_string = search_autocomplete.innerHTML;
 
@@ -53,3 +70,49 @@ This index.js script handles the events on the Chrome extension popup: index.htm
 // chrome.runtime.getBackgroundPage((background_service_worker_window) => {
 //     console.log(background_service_worker_window);
 // });
+
+// let searchButton = document.getElementById('searchChromeBookmarks');
+// searchButton.addEventListener('click', () => {
+//   chrome.tabs.create({url:chrome.extension.getURL('localsearch.html')})
+//   window.close()
+// });
+
+/* message handlers */
+// function oneTimeMessageReceiver(message, sender, sendResponse) {
+//   if (message.context === "contextMenuItem") {
+//     annotationTestText.textContent =
+//       message.info.onClickDataContextMenu.selectionText;
+//     annotationTestComment.textContent =
+//       message.info.onClickDataContextMenu.pageUrl;
+//   }
+// }
+
+// chrome.runtime.onMessage.addListener(async function requestCallback(
+//   request,
+//   sender,
+//   sendResponse
+// ) {
+//   if (request.context === "contextMenuItem") {
+//     if (request.error) {
+//     } else {
+//       annotationTestText.textContent =
+//         request.onClickDataContextMenu.selectionText;
+//       annotationTestComment = "test comment";
+//     }
+//   }
+// });
+
+// send message to background.js to get annotations from storage for the visited URL and highlight the page
+// if (activeTab) {
+//   chrome.tabs.sendMessage(
+//     activeTab.id,
+//     { action: "get-annotations-from-chrome-storage" },
+//     responseCallback
+//   );
+// }
+
+/* message listeners */
+// popup.js is an extension process, and thus uses the chrome.runtime API
+// the background.js service worker and the content script use the chrome.tabs API to send and receive messages
+// TODO: implement listener
+// chrome.runtime.onMessage.addListener(oneTimeMessageReceiver);
