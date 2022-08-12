@@ -1,8 +1,12 @@
 /*
-background.js is the service worker for this Chrome extension
-it is a separate process from the web page, and thus does not have access
-to the web page (the DOM)
+background.js is the service worker for the Chrome extension
+it is a separate process from the web page and shares the environment of the extension scripts.
+Thus, it does not have access the DOM of the web page.
+
 background.js can communicate with the extension through the Chrome messaging API
+
+This script listens to and responds to events that happen in the web page and browser window
+like context menu clicks, tab updates, and extension installation.
 */
 /* global variable declarations and assignments */
 
@@ -117,30 +121,21 @@ function getAnnotationsFromChromeStorage(activeTab, callback) {
 //   }
 // }
 
+// TODO: get port messaging working
 // long-lived messaging connection
 function runPortMessagingConnection(obj) {
   let queryOptions = { lastFocusedWindow: true, active: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`
-  let tabQueryPromise = chrome.tabs.query(queryOptions); // chrome.tabs.query returns a Promise object
-  tabQueryPromise
-    .then((activeTab) => {
-      if (activeTab && activeTab.length > 0) {
-        console.log("inside sendMessageActiveTab: tabUrl: " + activeTab.url);
-        const port = chrome.tabs.connect(activeTab.id);
+  // chrome.tabs.query returns a Promise object
+  chrome.tabs.query(queryOptions, (tabs) => {
+    if (tabs && tabs.length > 0){
+        let tab = tabs[0];
+        //chrome.tabs.sendMessage(tab.id, json, function(response) {});
+        const port = chrome.tabs.connect(tab.id);
+        port.onDisconnect = (err) => { console.error('disconnected with this error: ', err) };
         port.postMessage(obj);
-        port.onDisconnect = (err) => {
-          console.error("disconnected", err);
-        };
-      }
-    })
-    .catch((err) => {
-      console.log("in getActiveTab: error: " + err);
-    });
-  /*
-  port.onMessage.addListener((response) => {
-      console.error('port.onMessage response=',response);
-    });
-  */
+    };
+  });
 }
 
 /* end: message functions */
@@ -195,6 +190,21 @@ function runtimeRequestCallback(request, sender, sendResponse) {
       srcUrl: string: Will be present for elements with a 'src' URL.
     } */
 
+function sendMessageActiveTab(obj){
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs && tabs.length > 0){
+      var tab = tabs[0];
+      //chrome.tabs.sendMessage(tab.id, json, function(response) {});
+      const port = chrome.tabs.connect(tab.id);
+      port.postMessage(obj);
+      port.onDisconnect = (err) => { console.error('disconnected ' + err)};
+      /*port.onMessage.addListener((response) => {
+        console.error('port.onMessage response=',response);
+      });*/
+    }
+  });
+}
+
 function onClickContextMenusCallback(onClickData, tab) {
   if (highlightColorChoices.includes(onClickData.menuItemId)) {
     let annotationObj = {
@@ -206,22 +216,21 @@ function onClickContextMenusCallback(onClickData, tab) {
         tab: tab,
       },
     };
-    console.log(`in onClickContextMenusCallback
-                annotationObj: ${JSON.stringify(annotationObj)}`);
-    // sendOneTimeMessage(annotationObj);
-    // `tab` will either be a `tabs.Tab` instance or `undefined`
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      let activeTab = tabs[0];
-      chrome.tabs.sendMessage(activeTab.id, annotationObj, (response) => {
-        console.log(`response: ${JSON.stringify(response)}`);
-      });
-    });
+    sendMessageActiveTab(annotationObj);
+    
+    // chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    //   let activeTab = tabs[0];
+    //   chrome.tabs.sendMessage(activeTab.id, annotationObj, (response) => {
+    //     console.log(`response: ${JSON.stringify(response)}`);
+    //   });
+    // });
   }
 }
 
 // callback function for context menu create functions
 // if error occured, chrome.runtime.lastError will include it
 function contextMenusCreateCallback() {
+  if(!chrome.runtime.lastError) return;
   console.log("context menu create error: " + chrome.runtime.lastError);
 }
 

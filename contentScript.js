@@ -1,7 +1,12 @@
-// The content-script loads JavaScript in the context of the web page
-// So this script has the search function for the user search input/query
-// and listens to the background.js service worker for any messages
-// which will trigger any content script functions here
+/*
+The content-script loads JavaScript in the context of the web page
+This script has the search function to search the DOM
+This script istens to the extension (popup script and background.js service worker scripts)
+
+This script contains the DOM highlight functionality
+This script contains any UI that is not the extension popup UI
+*/
+
 
 /* global variable declarations and assignments */
 // let signedin = false;
@@ -27,6 +32,8 @@ let highlightedElements = [];
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
+
+let url = document.location.href;
 
 // get assets in your chrome extension directory
 function getChromeExtensionAssets() {
@@ -270,7 +277,7 @@ function sifterNextHighlight(event) {
 
 /* messaging between background.js (service worker) and content-script.js */
 
-// TODO: implement
+// TODO: implement oneTimeMessageReceiver
 // function oneTimeMessageReceiver(request, sender, sendResponse) {
 //   console.log(`in oneTimeMessageReceiver contentScript:
 //               request obj: ${JSON.stringify(request)}
@@ -312,68 +319,76 @@ function longLivedPortMessageReceiver(request, sender, sendResponse) {
 // });
 
 // one time messaging listener for extension processes sending messages to this content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log(`in contentScript chrome.runtime.onMessage Listener:
-              request obj: ${JSON.stringify(message)}
-              sender obj: ${JSON.stringify(sender)}`);
-  /*
-              request obj: {
-                "context":"onClickContextMenuItem",
-                "info":{
-                  "action":"highlight-selected-text",
-                  "highlightColor":"yellow",
-                  "onClickDataContextMenu":{
-                    "editable":false,
-                    "frameId":0,
-                    "menuItemId":"yellow",
-                    "pageUrl":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
-                    "selectionText":"Sending a request from the extension to a content script looks very similar"},
-                    "tab":{
-                      "active":true,
-                      "audible":false,
-                      "autoDiscardable":true,
-                      "discarded":false,
-                      "favIconUrl":"https://developer.chrome.com/images/meta/favicon-32x32.png",
-                      "groupId":-1,
-                      "height":734,
-                      "highlighted":true,
-                      "id":1374,
-                      "incognito":false,
-                      "index":4,
-                      "mutedInfo":{
-                        "muted":false
-                      },
-                      "pinned":false,
-                      "selected":true,
-                      "status":"complete",
-                      "title":"Message passing - Chrome Developers",
-                      "url":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
-                      "width":1440,
-                      "windowId":681
-                    }
-                  }
-                }
-              sender obj: {
-                "id":"mohidjhnipldcfhkbolgoggbbemaljih",
-                "origin":"null"
-              }
-              */
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//   console.log(`in contentScript chrome.runtime.onMessage Listener:
+//               request obj: ${JSON.stringify(message)}
+//               sender obj: ${JSON.stringify(sender)}`);
+//   /*
+//               request obj: {
+//                 "context":"onClickContextMenuItem",
+//                 "info":{
+//                   "action":"highlight-selected-text",
+//                   "highlightColor":"yellow",
+//                   "onClickDataContextMenu":{
+//                     "editable":false,
+//                     "frameId":0,
+//                     "menuItemId":"yellow",
+//                     "pageUrl":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
+//                     "selectionText":"Sending a request from the extension to a content script looks very similar"},
+//                     "tab":{
+//                       "active":true,
+//                       "audible":false,
+//                       "autoDiscardable":true,
+//                       "discarded":false,
+//                       "favIconUrl":"https://developer.chrome.com/images/meta/favicon-32x32.png",
+//                       "groupId":-1,
+//                       "height":734,
+//                       "highlighted":true,
+//                       "id":1374,
+//                       "incognito":false,
+//                       "index":4,
+//                       "mutedInfo":{
+//                         "muted":false
+//                       },
+//                       "pinned":false,
+//                       "selected":true,
+//                       "status":"complete",
+//                       "title":"Message passing - Chrome Developers",
+//                       "url":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
+//                       "width":1440,
+//                       "windowId":681
+//                     }
+//                   }
+//                 }
+//               sender obj: {
+//                 "id":"mohidjhnipldcfhkbolgoggbbemaljih",
+//                 "origin":"null"
+//               }
+//               */
 
-  highlightSelectedText(message);
-  createAnnotationPopover();
-});
+//   highlightSelectedText(message);
+//   createAnnotationPopover();
+// });
 
 // long-lived message port connection
-// chrome.runtime.onConnect.addListener((port) => {
-//   port.onMessage.addListener(longLivedPortMessageReceiver);
-// });
+chrome.runtime.onConnect.addListener((port) => {
+  port.onMessage.addListener((message) => {
+    // annotationObj = {
+    //   context: "onClickContextMenuItem",
+    //   info: {
+    //     action: actions.highlightSelectedText,
+    //     highlightColor: onClickData.menuItemId,
+    //     onClickDataContextMenu: onClickData,
+    //     tab: tab,
+    //   },
+    highlightSelectedText(message);
+    createAnnotationPopover();
+  });
+});
 /* end of message listeners */
 
 // sending messages from contentScript
-chrome.runtime.sendMessage(
-  (message = { action: "load-annotations-from-chrome-storage" }),
-  function callbackResponse(response) {
-    console.log(`in contentScript chrome.runtime.sendMessage:
-              response obj: ${JSON.stringify(response)}`);
-  }
-);
+chrome.runtime.sendMessage(message = { action: "load-annotations-from-chrome-storage", data: url }, 
+  (response) => {
+    // console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
+});

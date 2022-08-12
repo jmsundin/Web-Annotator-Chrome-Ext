@@ -87,6 +87,26 @@ const searchInput = document.getElementById("search-input");
 //   }
 // }
 
+// send message to background.js to get annotations from storage for the visited URL and highlight the page
+// if (activeTab) {
+//   chrome.tabs.sendMessage(
+//     activeTab.id,
+//     { action: "get-annotations-from-chrome-storage" },
+//     responseCallback
+//   );
+// }
+
+/* message listeners */
+// popup.js is an extension process, and thus uses the chrome.runtime API
+// the background.js service worker and the content script use the chrome.tabs API to send and receive messages
+// TODO: implement listener
+chrome.runtime.onMessage.addListener((message, sender, response) => {
+    if (message.action === "load-annotations-from-chrome-storage"){
+        let url = message.data;
+        annotationTestText.innerText = url;
+    }
+});
+
 // chrome.runtime.onMessage.addListener(async function requestCallback(
 //   request,
 //   sender,
@@ -101,18 +121,3 @@ const searchInput = document.getElementById("search-input");
 //     }
 //   }
 // });
-
-// send message to background.js to get annotations from storage for the visited URL and highlight the page
-// if (activeTab) {
-//   chrome.tabs.sendMessage(
-//     activeTab.id,
-//     { action: "get-annotations-from-chrome-storage" },
-//     responseCallback
-//   );
-// }
-
-/* message listeners */
-// popup.js is an extension process, and thus uses the chrome.runtime API
-// the background.js service worker and the content script use the chrome.tabs API to send and receive messages
-// TODO: implement listener
-// chrome.runtime.onMessage.addListener(oneTimeMessageReceiver);
