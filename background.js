@@ -20,8 +20,6 @@ const highlightColorChoices = [
 ];
 const actions = { highlightSelectedText: "highlight-selected-text" };
 
-/* end of global variable declarations */
-
 /* ----------- getter functions ----------------- */
 
 function getAnnotationsFromChromeStorage(activeTab, callback) {
@@ -82,23 +80,7 @@ function getAnnotationsFromChromeStorage(activeTab, callback) {
 // }
 
 /* ----------- end of getter functions ---------- */
-/*
-  for YouTube video search parameters
- const queryParameters = tab.url.split("?")[1];
- const urlParameters = URLSearchParams(queryParameters);
 
-
-  currentWindow is that which code is executing
-  if the currentWindow created many tabs or windows from a single HTML file,
-  the currentWindow will be the one that the original window where that HTML file
-  made the call to tabs.query
-
-  The currentWindow can be different than the top-most or focused window
-  if the initial call created other windows that become the top-most or focused window
-  the queryOptions below will only retrieve one tab due to the two constraints
-  per window, only one tab will ever be `active`
-
-  */
 /* message functions */
 
 // for single messages use the below Chrome messaging API
@@ -121,7 +103,7 @@ function getAnnotationsFromChromeStorage(activeTab, callback) {
 //   }
 // }
 
-// TODO: get port messaging working
+
 // long-lived messaging connection
 function runPortMessagingConnection(obj) {
   let queryOptions = { lastFocusedWindow: true, active: true };
@@ -240,7 +222,7 @@ function createContextMenusCallback() {
   chrome.contextMenus.create(
     {
       id: "yellow",
-      title: "yellow", // (Ctrl-Shift-Y)",
+      title: "yellow",
       type: "normal",
       contexts: ["selection"],
     },
@@ -250,7 +232,7 @@ function createContextMenusCallback() {
   chrome.contextMenus.create(
     {
       id: "red",
-      title: "red", // (Ctrl-Shift-Y)",
+      title: "red",
       type: "normal",
       contexts: ["selection"],
     },
@@ -260,7 +242,7 @@ function createContextMenusCallback() {
   chrome.contextMenus.create(
     {
       id: "grey",
-      title: "grey", // (Ctrl-Shift-Y)",
+      title: "grey",
       type: "normal",
       contexts: ["selection"],
     },
