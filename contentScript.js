@@ -56,6 +56,45 @@ function getUUID() {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
+function saveAnnotation(spanElement){
+  // spanElement.id = getUUID(); // id property is a string
+  // spanElement.className = "annotation-highlight";
+  // spanElement.style.backgroundColor = annotationObj.info.highlightColor;
+  // spanElement.dataset.url = annotationObj.info.tab.url;
+  // spanElement.dataset.comment = "";
+  
+  let action = "save-annotations-to-chrome-storage";
+  let annotationObj = {
+    annotationId: spanElement.id,
+    className: spanElement.className,
+    color: spanElement.style.backgroundColor,
+    url: spanElement.dataset.url,
+    comment: spanElement.dataset.comment
+  }
+
+  contentScriptSendMessage(action, annotationObj);
+}
+
+function addAnnotationElementsToDom(){
+  let action = "fetch-annotations-from-chrome-storage";
+  let response = contentScriptSendMessage(action, annotationObj = null);
+  // TODO: make sure response object is a span element
+  addSpanElementToDom(response);
+}
+
+function loadAnnotationsFromUrlIntoPopover(){
+  for (let annotation of highlightedElements){
+    // spanElement.id = getUUID(); // id property is a string
+    // spanElement.className = "annotation-highlight";
+    // spanElement.style.backgroundColor = annotationObj.info.highlightColor;
+    // spanElement.dataset.url = annotationObj.info.tab.url;
+    // spanElement.dataset.comment = "";
+    
+    // TODO: create a copy of the highlighted element and append to annotationPopover
+    annotationPopover.appendChild(annotationCopy);
+  }
+}
+
 function dragElement(div) {
   let draggedDiv = div;
   let left = 0;
@@ -197,7 +236,7 @@ function createAnnotationPopover() {
 
 
 // called from highlightSelectedText
-function addSpanElementToDocument(spanElement) {
+function addSpanElementToDom(spanElement) {
   if (window.getSelection) {
     let selection = window.getSelection();
     if (selection.rangeCount) {
@@ -228,14 +267,14 @@ function highlightSelectedText(annotationObj) {
   console.log(
     `inside highlightSelectedText spanElement: ${spanElement.toString()}`
   );
-  addSpanElementToDocument(spanElement);
+  addSpanElementToDom(spanElement);
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
   if (document.getElementById(spanElement.id)) {
     highlightedElements.push(spanElement); // global value of highlighted elements for a session
     // TODO: send message to background.js to save annotation to Chrome sync storage
-    // saveAnnotation(spanElement);
+    saveAnnotation(spanElement);
   }
 
   // this gets the highlighted/selected text anchor node from the window object
@@ -383,12 +422,36 @@ chrome.runtime.onConnect.addListener((port) => {
     //   },
     highlightSelectedText(message);
     createAnnotationPopover();
+    loadAnnotationsFromUrlIntoPopover();
   });
 });
 /* end of message listeners */
 
 // sending messages from contentScript
-chrome.runtime.sendMessage(message = { action: "load-annotations-from-chrome-storage", data: url }, 
-  (response) => {
-    // console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
-});
+function contentScriptSendMessage(action, message){
+  // message = {
+  //   annotationId: spanElement.id,
+  //   className: spanElement.className,
+  //   color: spanElement.style.backgroundColor,
+  //   url: spanElement.dataset.url,
+  //   comment: spanElement.dataset.comment
+  // }
+  // alert(JSON.stringify(message));
+  
+  if (action === "save-annotations-to-chrome-storage"){
+    chrome.runtime.sendMessage({action: action, data: message}, 
+      (response) => {
+      if (!response) return;
+      console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
+    });
+  }
+  if (action === "fetch-annotations-from-chrome-storage"){
+    chrome.runtime.sendMessage({action: action, data: message}, 
+      (response) => {
+      if (response) return response;
+      else console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
+    });
+  }
+
+}
+

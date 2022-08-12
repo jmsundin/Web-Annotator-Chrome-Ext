@@ -22,7 +22,7 @@ const actions = { highlightSelectedText: "highlight-selected-text" };
 
 /* ----------- getter functions ----------------- */
 
-function getAnnotationsFromChromeStorage(activeTab, callback) {
+function fetchAnnotationsFromChromeStorage(activeTab, callback) {
   let urlKey = activeTab.url; // url is stored as a string in tab object
   var obj = {};
   obj[keyName] = null;
@@ -142,25 +142,34 @@ function onUpdatedTabCallback(tabId, changeInfo, tab) {
           tab: tab,
         },
       };
-      // if (message){
-      //   console.log(`onUpdatedTabCallback: after message obj creation
-      //                Message obj: ${JSON.stringify(message)}`);
-      // }
-      // sendOneTimeMessage(message);
+    // TODO: fetch saved annotations from chrome storage when this onUpdateTabCallback function is called
+    let action = "fetch-annotations-from-chrome-storage";
+    runtimeRequestCallback(message, action);
     }
   }
 }
 
-function runtimeRequestCallback(request, sender, sendResponse) {
-  console.log(`runtimeRequestCallback background.js: 
-              request obj: ${JSON.stringify(request)}
-              sender obj: ${JSON.stringify(sender)}`);
+function runtimeRequestCallback(message, sender, sendResponse) {
+  // console.log(`runtimeRequestCallback background.js: 
+  //             message obj: ${JSON.stringify(message)}
+  //             sender obj: ${JSON.stringify(sender)}`);
 
-  // if (request.action === "get-annotations-from-chrome-storage"){
-  //   let success = false;
-  //   success = getAnnotationsFromChromeStorage(request, sender);
-  //   sendResponse("successfully retrieved annotations from chrome storage: " + success.toString());
-  // }
+  if (message.action === "save-annotations-to-chrome-storage"){
+    let encodedUrlAsKey = btoa(message.data.url);  // btoa function encodes the url, use atob function to decode the url
+    annotationId = message.data.annotationId;
+    let annotationsForUrl = {};
+    annotationsForUrl[encodedUrlAsKey] = {annotationId: message.data};
+    chrome.storage.sync.set(annotationsForUrl, () => {
+      console.log(`annotation for ${message.data.url} set to ${JSON.stringify(annotationsForUrl)}`);
+    });
+  }
+  if (message.action === "fetch-annotations-from-chrome-storage"){
+    let encodedUrlAsKey = btoa(message.data.url);
+    chrome.storage.sync.get(encodedUrlAsKey, (result) => {
+      console.log(`annotation: ${JSON.stringify(result)}; from: ${message.data.url}; fetched from chrome storage`);
+    });
+    // sendResponse("successfully retrieved annotations from chrome storage: " + success.toString());
+  }
 }
 
 /* info object passed when contextMenu item is clicked
@@ -258,7 +267,8 @@ function createContextMenusCallback() {
 // chrome.tabs.onActivated.addListener(activatedTabHandler);
 
 // listening for a new tab opened or to a new URL typed in a tab
-// chrome.tabs.onUpdated.addListener(onUpdatedTabCallback);
+// chrome.tabs.
+chrome.tabs.onUpdated.addListener(onUpdatedTabCallback);
 
 // on drag end listener
 // chrome.event.addListener('dragend', onDragEventHandler);
