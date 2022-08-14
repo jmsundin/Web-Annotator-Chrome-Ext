@@ -1,5 +1,5 @@
 {
-    "name": "Web-Annotator",
+    "name": "Sifter-Annotator",
     "author": "Jon Sundin",
     "manifest_version": 3,
     "version": "1.0.0",
@@ -21,9 +21,9 @@
       }
     ],
     
-    "permissions": ["activeTab", "storage", "contextMenus", "tabs", "bookmarks"],
+    "permissions": ["activeTab", "storage", "contextMenus", "tabs", "scripting", "bookmarks"],
     "action": {
-      "default_title": "Web-Annotator",
+      "default_title": "Sifter-Annotator",
       "default_popup": "./popup.html"
     },
     "commands": {
