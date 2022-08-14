@@ -18,11 +18,19 @@ const highlightColorChoices = [
   "white",
   "grey",
 ];
-const actions = { highlightSelectedText: "highlight-selected-text" };
+const actions = { 
+  highlightSelectedText: "highlight-selected-text",
+  saveAnnotation: "save-annotations-to-chrome-storage",
+  fetchAnnotation: "fetch-annotations-from-chrome-storage"
+};
 
 /* ----------- getter functions ----------------- */
 
-function getAnnotationsFromChromeStorage(activeTab, callback) {
+function getUUID() {
+  return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
+}
+
+function fetchAnnotationsFromChromeStorage(activeTab, callback) {
   let urlKey = activeTab.url; // url is stored as a string in tab object
   var obj = {};
   obj[keyName] = null;
@@ -57,17 +65,34 @@ function getAnnotationsFromChromeStorage(activeTab, callback) {
 // };
 
 /* saving annotation to chrome sync */
-// function saveAnnotation(spanElement){
-//   let annotationUrl = spanElement.dataset.url;
-//   let annotationId = spanElement.id;
-//   chrome.storage.sync.set({
-//     [annotationUrl]: {
-//       [annotationId]: JSON.stringify(spanElement)
-//     }
-//   }, (result) => {
-//     alert("Annotation saved: " + result.annotationUrl);
-//   });
-// }
+function saveAnnotation(annotationObj){
+  /* annotation object data model:
+    let annotationObj = {
+      context: "onClickContextMenuItem",
+      action: [actions.highlightSelectedText, actions.saveAnnotation],
+      data: {
+        id: getUUID(),
+        highlightColor: onClickData.menuItemId,
+        selectionText: onClickData.selectionText,
+        srcUrl: onClickData.srcUrl,
+        comment: "",
+        urlTitle: tab.title,
+        pageUrl: onClickData.pageUrl
+      }
+    };
+  */
+  
+  let encodedUrlAsKey = btoa(annotationObj.data.pageUrl);  // btoa function encodes the url, use atob function to decode the url
+  let annotationsForUrl = {
+    [encodedUrlAsKey]: {[annotationObj.data.id]: annotationObj.data}
+  }
+  chrome.storage.sync.set(annotationsForUrl, (result) => {
+    if(!result){
+      console.log(`Annotation saved to chrome storage: ${annotationObj.data.selectionText}`);
+    }
+    else console.error(`Failed to save annotation ${annotationObj.data.selectionText} with error: ${result}`);
+  });
+}
 
 // TODO: implement updateAnnotation
 // function updateAnnotation(request, annotation){
@@ -142,25 +167,30 @@ function onUpdatedTabCallback(tabId, changeInfo, tab) {
           tab: tab,
         },
       };
-      // if (message){
-      //   console.log(`onUpdatedTabCallback: after message obj creation
-      //                Message obj: ${JSON.stringify(message)}`);
-      // }
-      // sendOneTimeMessage(message);
+    // TODO: fetch saved annotations from chrome storage when this onUpdateTabCallback function is called
+    let action = "fetch-annotations-from-chrome-storage";
+    runtimeRequestCallback(message, action);
     }
   }
 }
 
-function runtimeRequestCallback(request, sender, sendResponse) {
-  console.log(`runtimeRequestCallback background.js: 
-              request obj: ${JSON.stringify(request)}
-              sender obj: ${JSON.stringify(sender)}`);
+function runtimeRequestCallback(message, sender, sendResponse) {
+  // message = {action: action, data: annotationObj}
+  
+  // console.log(`runtimeRequestCallback background.js: 
+  //             message obj: ${JSON.stringify(message)}
+  //             sender obj: ${JSON.stringify(sender)}`);
 
-  // if (request.action === "get-annotations-from-chrome-storage"){
-  //   let success = false;
-  //   success = getAnnotationsFromChromeStorage(request, sender);
-  //   sendResponse("successfully retrieved annotations from chrome storage: " + success.toString());
-  // }
+  if (message.action === "save-annotations-to-chrome-storage"){
+    saveAnnotation(message.data);
+  }
+  if (message.action === "fetch-annotations-from-chrome-storage"){
+    let encodedUrlAsKey = btoa(message.data.url);
+    chrome.storage.sync.get(encodedUrlAsKey, (result) => {
+      console.log(`annotation: ${JSON.stringify(result)}; from: ${message.data.url}; fetched from chrome storage`);
+    });
+    // sendResponse("successfully retrieved annotations from chrome storage: " + success.toString());
+  }
 }
 
 /* info object passed when contextMenu item is clicked
@@ -172,31 +202,55 @@ function runtimeRequestCallback(request, sender, sendResponse) {
       srcUrl: string: Will be present for elements with a 'src' URL.
     } */
 
-function sendMessageActiveTab(obj){
+  /* annotation object data model
+    let annotationObj = {
+      context: "onClickContextMenuItem",
+      action: actions.highlightSelectedText,
+      data: {
+        highlightColor: onClickData.menuItemId,
+        selectionText: onClickData.selectionText,
+        srcUrl: onClickData.srcUrl,
+        comment: "",
+        urlTitle: tab.title,
+        pageUrl: onClickData.pageUrl
+      }
+    };
+    */
+function sendMessageActiveTab(annotationObj){
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     if (tabs && tabs.length > 0){
       var tab = tabs[0];
       //chrome.tabs.sendMessage(tab.id, json, function(response) {});
       const port = chrome.tabs.connect(tab.id);
-      port.postMessage(obj);
+      port.postMessage(annotationObj);
       port.onDisconnect = (err) => { console.error('disconnected ' + err)};
-      /*port.onMessage.addListener((response) => {
-        console.error('port.onMessage response=',response);
-      });*/
     }
   });
 }
 
+/* info object passed when contextMenu item is clicked
+  callback parameters include: (info: OnClickData, tab?: tabs.Tab)
+  info = { // of these the menuItemId is required
+      menuItemId: string or int: the ID of the menu item that was clicked,
+      pageUrl: string: The URL of the page where the menu item was clicked. This property is not set if the click occured in a context where there is no current page, such as in a launcher context menu.,
+      selectionText: string: The text for the context selection, if any.,
+      srcUrl: string: Will be present for elements with a 'src' URL.
+    } */
 function onClickContextMenusCallback(onClickData, tab) {
   if (highlightColorChoices.includes(onClickData.menuItemId)) {
+    // annotation data model object
     let annotationObj = {
       context: "onClickContextMenuItem",
-      info: {
-        action: actions.highlightSelectedText,
+      action: [actions.highlightSelectedText, actions.saveAnnotation],
+      data: {
+        id: getUUID(),
         highlightColor: onClickData.menuItemId,
-        onClickDataContextMenu: onClickData,
-        tab: tab,
-      },
+        selectionText: onClickData.selectionText,
+        srcUrl: onClickData.srcUrl,
+        comment: "",
+        urlTitle: tab.title,
+        pageUrl: onClickData.pageUrl
+      }
     };
     sendMessageActiveTab(annotationObj);
     
@@ -258,7 +312,8 @@ function createContextMenusCallback() {
 // chrome.tabs.onActivated.addListener(activatedTabHandler);
 
 // listening for a new tab opened or to a new URL typed in a tab
-// chrome.tabs.onUpdated.addListener(onUpdatedTabCallback);
+// chrome.tabs.
+chrome.tabs.onUpdated.addListener(onUpdatedTabCallback);
 
 // on drag end listener
 // chrome.event.addListener('dragend', onDragEventHandler);

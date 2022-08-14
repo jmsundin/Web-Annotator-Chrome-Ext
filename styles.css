@@ -44,10 +44,10 @@ img {
     padding-right: 2rem;
   }
   
-  .py-2 {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-  }
+.py-2 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
 
 
 #popup-card {
