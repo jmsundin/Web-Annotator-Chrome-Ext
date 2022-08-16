@@ -101,10 +101,10 @@ const searchInput = document.getElementById("search-input");
 // the background.js service worker and the content script use the chrome.tabs API to send and receive messages
 // TODO: implement listener
 chrome.runtime.onMessage.addListener((message, sender, response) => {
-    if (message.action === "load-annotations-from-chrome-storage"){
-        let url = message.data;
-        annotationTestText.innerText = url;
-    }
+  if (message.action === "load-annotations-from-chrome-storage") {
+    let url = message.data;
+    annotationTestText.innerText = url;
+  }
 });
 
 // chrome.runtime.onMessage.addListener(async function requestCallback(
