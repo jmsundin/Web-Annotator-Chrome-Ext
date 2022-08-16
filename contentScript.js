@@ -7,33 +7,28 @@ This script contains the DOM highlight functionality
 This script contains any UI that is not the extension popup UI
 */
 
-
 /* global variable declarations and assignments */
-// let signedin = false;
-let forecolor = "#000000";
-let currentColor = "yellow";
-let lastHighlight = null;
-let leftMark = "<<"; //'&ldquo;'
-let rightMark = ">>"; //'&rdquo;'
-let lenquote = rightMark.length; //2;
-let googleColors = [];
-googleColors["yellow"] = "yellow";
-googleColors["red"] = "#ff9999";
-googleColors["blue"] = "#0df"; //'lightblue';
-googleColors["green"] = "#99ff99";
-googleColors["white"] = "transparent";
-let notRemapped = [];
+const constants = {
+  highlightColorChoices: ["yellow", "red", "blue", "green", "white", "grey"],
+  context: {
+    onUpdatedTabComplete: "on-updated-tab-complete",
+    onClickContextMenuItem: "on-click-context-menu-item",
+  },
+  actions: {
+    highlightSelectedText: "highlight-selected-text",
+    addAnnotationsForUrlToDom: "add-annotations-for-url-to-dom",
+    saveAnnotations: "save-annotations-to-chrome-storage",
+    fetchAnnotations: "fetch-annotations-from-chrome-storage",
+  },
+};
 
 let annotationPopover = null;
-let hoverColor = "lightgray"; //'pink'
-let hoverElement = null;
+
 // highlighted elements in page
 let annotationObjsForUrl = [];
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
-
-let url = document.location.href;
 
 // get assets in your chrome extension directory
 function getChromeExtensionAssets() {
@@ -52,47 +47,40 @@ function searchDOM(searchString) {
   }
 }
 
-
-function saveAnnotation(annotationObj){
-  let action = annotationObj.action[1]; // second item in array is saveAnnotation action
-  contentScriptSendMessage(action, annotationObj);
+function getActiveTabUrl(){
+  let queryOptions = { active: true, currentWindow: true }
+  chrome.tabs.query(queryOptions, (tabs) => {
+    if(tabs){
+      let activeTab = tabs[0];
+      return activeTab.url;
+    }
+  });
 }
 
-function addAnnotationElementsToDom(){
-  let action = "fetch-annotations-from-chrome-storage";
-  let response = contentScriptSendMessage(action, annotationObj = null);
-  // TODO: make sure response object is a span element
-  addSpanElementToDom(response);
+function encodeUrlBase64(url){
+  return window.btoa(url);
 }
 
-// TODO: add these functions into addAnnotationsForUrlIntoPopover()
-/*
-function onClickAddComment(){
-  	
+function decodeBase64Url(encodedUrlBase64){
+  return window.atob(encodedUrlBase64);
+}
+
+// TODO: implement save annotations in batch
+// function saveAnnotationsForActiveTab(annotationObj) {
+// let action = annotationObj.action[1]; // second item in array is saveAnnotation action
+//   contentScriptSendMessage(action, annotationObj);
+// }
+
+// TODO: add this function into addAnnotationsForUrlIntoPopover()
+function onClickAddComment() {
   let textInput = document.getElementById("input_text").value;
- let commentElement = document.getElementById("comment_text");
+  let commentElement = document.getElementById("comment_text");
   commentElement.innerText = textInput;
 }
 
-*/
-
-function addAnnotationsForUrlIntoPopover(){
-  if (annotationPopover && annotationObjsForUrl){
-    /* annotation object data model:
-    let annotationObj = {
-      context: "onClickContextMenuItem",
-      action: [actions.highlightSelectedText, actions.saveAnnotation],
-      data: {
-        highlightColor: onClickData.menuItemId,
-        selectionText: onClickData.selectionText,
-        srcUrl: onClickData.srcUrl,
-        comment: "",
-        urlTitle: tab.title,
-        pageUrl: onClickData.pageUrl
-      }
-    };
-    */
-    for (let annotation of annotationObjsForUrl){
+function addAnnotationsForUrlIntoPopover() {
+  if (annotationPopover && annotationObjsForUrl) {
+    for (let annotation of annotationObjsForUrl) {
       let annotationElement = document.createElement("div");
       annotationElement.className = "sifter-annotation";
       annotationElement.innerHTML = annotation.data.selectionText;
@@ -119,8 +107,6 @@ function addAnnotationsForUrlIntoPopover(){
       document.body.appendChild(commentInput);
       document.body.appendChild(commentSubmit);
       document.body.appendChild(commentElement);
-
-      
     }
   }
 }
@@ -167,7 +153,9 @@ function dragElement(div) {
   }
 }
 
-// createAnnotationPopover is called when span element annotation is added to the DOM
+/*
+CreateAnnotationPopover is called when span element annotation is added to the DOM
+*/
 function createAnnotationPopover() {
   if (annotationPopover === null) {
     annotationPopover = document.createElement("div");
@@ -188,13 +176,11 @@ function createAnnotationPopover() {
     annotationPopover.style.color = "black";
     annotationPopover.textContent = "";
     annotationPopover.style.textAlign = "center";
-    //annotationPopover.style.cursor = 'pointer';
 
     annotationPopover.style.fontSize = "14px";
     annotationPopover.style.fontWeight = "bold";
     annotationPopover.style.color = "black";
     annotationPopover.style.backgroundColor = "#E3E3E3";
-    //annotationPopover.style.borderRadius = '32px';
     annotationPopover.style.padding = "8px 16px";
 
     let dragheaderPopover = document.createElement("div");
@@ -215,30 +201,6 @@ function createAnnotationPopover() {
     annotationPopoverCaption.style.userSelect = "none";
     annotationPopoverCaption.textContent = "";
     annotationPopover.appendChild(annotationPopoverCaption);
-
-    // var highlightsnotfound = document.createElement('div');
-    // highlightsnotfound.style.color = '#a22';
-    // highlightsnotfound.style.cursor = 'pointer';
-    // highlightsnotfound.addEventListener('click',showNotFound);
-    // highlightsnotfound.title = 'Click to show missing highlights';
-    // highlightsnotfound.id = 'highlightsnotfound';
-    // annotationPopover.appendChild(highlightsnotfound);
-
-    // var highlightsnotfoundtext = document.createElement('div');
-    // highlightsnotfoundtext.style.color = '#a22';
-    // highlightsnotfoundtext.style.display = 'none';
-    // highlightsnotfoundtext.id = 'highlightsnotfoundtext';
-    // annotationPopover.appendChild(highlightsnotfoundtext);
-
-    /*var charactersleft = document.createElement('div');
-    charactersleft.style.color = '#000';
-    charactersleft.style.fontSize = '11px';
-    charactersleft.style.cursor = 'pointer';
-    charactersleft.title = 'Number of total characters used for this page in Google Bookmarks, out of 2048 possible';
-    charactersleft.addEventListener('click',function () { alert(charactersUsed + ' characters used out of 2048 allowed by Google Bookmarks for this page')},false);
-    charactersleft.style.display = 'block';
-    charactersleft.id = 'charactersleft';
-    annotationPopover.appendChild(charactersleft);*/
 
     let close = document.createElement("div");
     close.textContent = "✕";
@@ -264,6 +226,20 @@ function createAnnotationPopover() {
   }
 }
 
+function addAnnotationsForUrlToDom(message) {
+  let annotationObjsForUrl = message.annotationsForUrl;
+  if (annotationObjsForUrl.length > 1) {
+    for (let annotation of annotationObjsForUrl) {
+      addSpanElementToDom(createSpanElement(annotation));
+    }
+  } else {
+    // only one annotation obj, thus no loop necessary
+    addSpanElementToDom(createSpanElement(annotationObjsForUrl));
+  }
+
+  addSpanElementToDom();
+}
+
 // called from highlightSelectedText
 function addSpanElementToDom(spanElement) {
   if (window.getSelection) {
@@ -282,81 +258,41 @@ function addSpanElementToDom(spanElement) {
   }
 }
 
-function createSpanElement(annotationObj){
-  /* annotation object data model:
-    let annotationObj = {
-      context: "onClickContextMenuItem",
-      action: [actions.highlightSelectedText, actions.saveAnnotation],
-      data: {
-        id: getUUID(), // in background.js
+/*
+annotationObj: {
+        id: getUUID(),
         highlightColor: onClickData.menuItemId,
         selectionText: onClickData.selectionText,
         srcUrl: onClickData.srcUrl,
         comment: "",
         urlTitle: tab.title,
-        pageUrl: onClickData.pageUrl
-      }
-    };
-    */
-  
+        pageUrl: onClickData.pageUrl,
+*/
+function createSpanElement(annotationObj) {
   let spanElement = document.createElement("span");
-  spanElement.id = annotationObj.data.id;  // id property is a string
+  spanElement.id = annotationObj.id;  // id: string
   spanElement.className = "sifter-annotation";
-  spanElement.style.backgroundColor = annotationObj.data.highlightColor;
-  spanElement.dataset.comment = annotationObj.data.comment;
-  
+  spanElement.style.backgroundColor = annotationObj.highlightColor;
+  // add comment to spanElement.dataset to grab it for hover-over comment viewing functionality later
+  spanElement.dataset.comment = annotationObj.comment; 
   return spanElement;
 }
 
 /* highlight the selection */
-
 function highlightSelectedText(annotationObj) {
-  /* annotation object data model:
-    let annotationObj = {
-      context: "onClickContextMenuItem",
-      action: [actions.highlightSelectedText, actions.saveAnnotation],
-      data: {
-        id: getUUID(), // in background.js
-        highlightColor: onClickData.menuItemId,
-        selectionText: onClickData.selectionText,
-        srcUrl: onClickData.srcUrl,
-        comment: "",
-        urlTitle: tab.title,
-        pageUrl: onClickData.pageUrl
-      }
-    };
-    */
-
   // create a new span element with class annotation-highlight and
   // requested color from the context menu
   let spanElement = createSpanElement(annotationObj);
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   addSpanElementToDom(spanElement);
-  
+
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
   if (document.getElementById(spanElement.id)) {
     createAnnotationPopover();
     annotationObjsForUrl.push(annotationObj); // global value of annotation objs for the url
     addAnnotationsForUrlIntoPopover();
-    // TODO: send message to background.js to save annotation to Chrome sync storage
-    saveAnnotation(annotationObj);
   }
-
-  // this gets the highlighted/selected text anchor node from the window object
-  // let selectedTextAnchorNode = window.getSelection().anchorNode;
-
-  // let selectionObj = window.getSelection();
-  // let selectedTextType = selectionObj.type;
-  // let selectedTextRange = selectionObj.getRangeAt(0);
-  // let selectedTextAnchorNode = selectionObj.anchorNode;
-
-  // console.log(`selectectedTextType: ${selectedTextType} \n
-  //            selectedTextRange: ${selectedTextRange} \n
-  //            selectedTextAnchorNodeName: ${selectedTextAnchorNode.nodeName}`);
-
-  // the onClickDataContextMenu obj in the request obj has a selectionText key
-  // let selectedText = request.onClickDataContextMenu.selectionText;
 }
 
 function sifterNextHighlight(event) {
@@ -366,7 +302,7 @@ function sifterNextHighlight(event) {
     event.stopPropagation();
   }
 
-  var highlights = document.getElementsByClassName("annotation-highlight");
+  let highlights = document.getElementsByClassName("annotation-highlight");
   if (highlights.length == 0) return;
   currentHighlight = currentHighlight % highlights.length;
   // updateAnnotationPopoverCaption();
@@ -375,161 +311,87 @@ function sifterNextHighlight(event) {
   h.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
   h.style.opacity = 0.2;
   currentHighlight += 1;
-  setTimeout(function () {
+  setTimeout(() => {
     h.style.opacity = 1.0;
   }, 300);
 }
 
-/* messaging between background.js (service worker) and content-script.js */
-
-// TODO: implement oneTimeMessageReceiver
-// function oneTimeMessageReceiver(request, sender, sendResponse) {
-//   console.log(`in oneTimeMessageReceiver contentScript:
-//               request obj: ${JSON.stringify(request)}
-//               sender obj: ${JSON.stringify(sender)}`);
-
-// if (request.context === "onClickContextMenuItem"){
-//   if (request.info.action === "highlight-selected-text") {
-//     highlightSelectedText(request);
-//   }
-// }
-// if (request.context === "onUpdatedTabCallback-status-complete"){
-//   // TODO: implement in when this is the context from background.js
-// }
-// if (request.action === "get-annotations"){
-//   alert(await getAnnotations(request));
-// }
-// }
-
-function longLivedPortMessageReceiver(request, sender, sendResponse) {
-  console.log("inside the contentScriptCallback");
-  if (request.action === "highlight-selected-text") {
-    highlightSelectedText(request);
-  }
-}
 /* end of messaging callback functions */
 
 /* listeners */
 
-// context menu global event callback function
-// https://developer.mozilla.org/en-US/docs/Web/API/Element/contextmenu_event
-
 /* message listeners */
 
-// chrome.tabs.onMessage listens for other content scripts sending messages to this content script
-// chrome.tabs.onMessage.addListener(function(message, sender, sendResponse){
-//   console.log(`in contentScript chrome.tabs.onMessage Listener:
-//               request obj: ${JSON.stringify(message)}
-//               sender obj: ${JSON.stringify(sender)}`);
-// });
-
-// one time messaging listener for extension processes sending messages to this content script
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   console.log(`in contentScript chrome.runtime.onMessage Listener:
-//               request obj: ${JSON.stringify(message)}
-//               sender obj: ${JSON.stringify(sender)}`);
-//   /*
-//               request obj: {
-//                 "context":"onClickContextMenuItem",
-//                 "info":{
-//                   "action":"highlight-selected-text",
-//                   "highlightColor":"yellow",
-//                   "onClickDataContextMenu":{
-//                     "editable":false,
-//                     "frameId":0,
-//                     "menuItemId":"yellow",
-//                     "pageUrl":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
-//                     "selectionText":"Sending a request from the extension to a content script looks very similar"},
-//                     "tab":{
-//                       "active":true,
-//                       "audible":false,
-//                       "autoDiscardable":true,
-//                       "discarded":false,
-//                       "favIconUrl":"https://developer.chrome.com/images/meta/favicon-32x32.png",
-//                       "groupId":-1,
-//                       "height":734,
-//                       "highlighted":true,
-//                       "id":1374,
-//                       "incognito":false,
-//                       "index":4,
-//                       "mutedInfo":{
-//                         "muted":false
-//                       },
-//                       "pinned":false,
-//                       "selected":true,
-//                       "status":"complete",
-//                       "title":"Message passing - Chrome Developers",
-//                       "url":"https://developer.chrome.com/docs/extensions/mv3/messaging/",
-//                       "width":1440,
-//                       "windowId":681
-//                     }
-//                   }
-//                 }
-//               sender obj: {
-//                 "id":"mohidjhnipldcfhkbolgoggbbemaljih",
-//                 "origin":"null"
-//               }
-//               */
-
-//   highlightSelectedText(message);
-//   createAnnotationPopover();
-// });
-
-// long-lived message port connection
+/* 
+messaging between extension processes in the chrome runtime, not the web page runtime 
+background.js (service worker) and content-script.js
+*/
 chrome.runtime.onConnect.addListener((port) => {
-  port.onMessage.addListener((annotationObj) => {
-    /* annotation object data model:
-    let annotationObj = {
-      context: "onClickContextMenuItem",
-      action: [actions.highlightSelectedText, actions.saveAnnotation],
-      data: {
-        id: getUUID(),
-        highlightColor: onClickData.menuItemId,
-        selectionText: onClickData.selectionText,
-        srcUrl: onClickData.srcUrl,
-        comment: "",
-        urlTitle: tab.title,
-        pageUrl: onClickData.pageUrl
-      }
-    };
-    */
-    highlightSelectedText(annotationObj);
+  port.onMessage.addListener((message) => {
+    if (message.action === constants.actions.highlightSelectedText) {
+      highlightSelectedText(message.annotationObj);
+    }
+    if (message.action === constants.actions.addAnnotationsForUrlToDom) {
+      addAnnotationsForUrlToDom(message.annotationObjs);
+    }
   });
 });
+
 /* end of message listeners */
 
-// sending messages from contentScript
-function contentScriptSendMessage(action, annotationObj){
-  // annotationObj data model:
-  // let annotationObj = {
-  //   context: "onClickContextMenuItem",
-  //   action: [actions.highlightSelectedText, actions.saveAnnotation],
-  //   data: {
-  //     id: getUUID(),
-  //     highlightColor: onClickData.menuItemId,
-  //     selectionText: onClickData.selectionText,
-  //     srcUrl: onClickData.srcUrl,
-  //     comment: "",
-  //     urlTitle: tab.title,
-  //     pageUrl: onClickData.pageUrl
-  //   }
-  // };
-
-  
-  if (action === "save-annotations-to-chrome-storage"){
-    chrome.runtime.sendMessage({action: action, data: annotationObj}, 
-      (response) => {
-      if (!response) return;
-      console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
-    });
+/* sending messages from contentScript */
+// TODO: send array/batch of annotation objects to save to chrome storage
+function contentScriptSendMessage(action, data) {
+  if (action === constants.actions.saveAnnotations) {
+    let annotationObjs = data;
+    let message = {
+      action: constants.actions.saveAnnotations, 
+      data: annotationObjs
+    }
+    chrome.runtime.sendMessage( message, (response) => {
+        if (!response) return;
+        console.log(
+          `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
+            response
+          )}`
+        );
+      }
+    );
   }
-  if (action === "fetch-annotations-from-chrome-storage"){
-    chrome.runtime.sendMessage({action: action, data: annotationObj}, 
-      (response) => {
-      if (response) return response;
-      else console.log(`in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(response)}`);
-    });
+  // window.atob function decodes the base64 back to the url string
+  // window.btoa function encodes the url string to base64
+  if (action === constants.actions.fetchAnnotations) {
+    let encodedUrlAsKey = data;
+    let message = {
+      action: constants.actions.fetchAnnotations, 
+      data: encodedUrlAsKey
+    }
+    chrome.runtime.sendMessage( message, (response) => {
+        if (response) return response;
+        else
+          console.log(
+            `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
+              response
+            )}`
+          );
+      }
+    );
   }
-
 }
 
+// when the DOM content loads, get the active tab url
+// encode the url as a base64 string
+// that string is the key to fetch any annotations in the page
+// stored in chrome storage or later the cloud
+window.addEventListener('DOMContentLoaded', (event) => {
+  // What to do when DOM content is loaded?
+});
+
+// fired when a connection is made from either an extension process or a content script
+chrome.runtime.onConnect.addListener((event) => {
+  alert(`end of content script: dom content loaded ${event}`);
+  let activeTabUrl = getActiveTabUrl();
+  const encodedUrlAsKey = encodeUrlBase64(activeTabUrl);
+  let action = constants.actions.fetchAnnotations;
+  contentScriptSendMessage(action, encodedUrlAsKey);
+});

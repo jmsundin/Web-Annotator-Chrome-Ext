@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Highlight paragraphs on web pages with different colors and store them for future use; search or revisit pages to retrieve the highlighted text.",
     "background": {
-      "service_worker": "./background.js"
+      "service_worker": "./background.js",
+      "type": "module"
     },
     "content_scripts": [
       {
@@ -20,7 +21,6 @@
         "all_frames": true
       }
     ],
-    
     "permissions": ["activeTab", "storage", "contextMenus", "tabs", "scripting", "bookmarks"],
     "action": {
       "default_title": "Sifter-Annotator",
