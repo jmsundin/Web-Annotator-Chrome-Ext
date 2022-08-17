@@ -16,20 +16,20 @@ let onUpdatedTabStatus = null;
 const onUpdatedTabState = {
   unloaded: "unloaded",
   loading: "loading",
-  complete: "complete"
+  complete: "complete",
 };
 
 let urlsAndAnnotations = {};
-let urls = {};  // hashmap of url with count of annoation objs with that url
+let urls = {}; // hashmap of url with count of annoation objs with that url
 let arrayOfAnnotationObjs = [];
 
 // setInterval(createObjOfUrlsAndAnnotations, 10000);
 
-function createObjOfUrlsAndAnnotations(){
+function createObjOfUrlsAndAnnotations() {
   let tempArray = [];
-  if(arrayOfAnnotationObjs.length > 0){
-    for (let annotation of arrayOfAnnotationObjs){
-      while(urls[annotation.pageUrl]){
+  if (arrayOfAnnotationObjs.length > 0) {
+    for (let annotation of arrayOfAnnotationObjs) {
+      while (urls[annotation.pageUrl]) {
         console.log(urls[annotation.pageUrl]);
         urlsAndAnnotations[annotation.pageUrl] = tempArray.push(annotation);
         annotationCountsForUrl[annotation.pageUrl]--;
@@ -39,11 +39,11 @@ function createObjOfUrlsAndAnnotations(){
     return true;
   } else return false;
 }
-  
-function getActiveTabUrl(){
-  let queryOptions = { active: true, currentWindow: true }
+
+function getActiveTabUrl() {
+  let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {
-    if(tabs.length > 0){
+    if (tabs.length > 0) {
       let activeTab = tabs[0];
       return activeTab.url;
     }
@@ -54,11 +54,11 @@ function getUUID() {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
-function saveAnnotations(annotationObjs){
+function saveAnnotations(annotationObjs) {
   let encodedUrlBase64 = Base64.encode(annotationObjs.pageUrl);
   let obj = {
-    [encodedUrlBase64]: annotationObjs
-  }
+    [encodedUrlBase64]: annotationObjs,
+  };
   chrome.storage.sync.set(obj, (response) => {
     console.log(`chrome storage sync set response: ${response}`);
   });
@@ -68,11 +68,12 @@ function fetchAnnotationsForUrlKey(encodedUrlBase64) {
   // url: string
   // url is stored as a string in the tab object
   chrome.storage.sync.get(encodedUrlBase64, (annotationObjsForUrl) => {
-    if(Object.keys(annotationObjsForUrl).length > 0) {
+
+    if (Object.keys(annotationObjsForUrl).length > 0) {
       let message = {
         context: constants.context.onUpdatedTabComplete,
         action: constants.actions.addAnnotationsForUrlToDom,
-        annotationsObjsForUrl: annotationObjsForUrl
+        annotationsObjsForUrl: annotationObjsForUrl,
       };
       runPortMessagingConnection(message);
     } else {
@@ -92,54 +93,22 @@ function fetchAnnotationsForUrlKey(encodedUrlBase64) {
 //   }
 // }
 
-
-function runPortMessagingConnection(message) {
-  let queryOptions = { lastFocusedWindow: true, active: true };
-  // `tab` will either be a `tabs.Tab` instance or `undefined`
-  // chrome.tabs.query returns a Promise object
-  chrome.tabs.query(queryOptions, (tabs) => {
-    if (tabs && tabs.length > 0) {
-      let tab = tabs[0];
-      const port = chrome.tabs.connect(tab.id);
-      port.postMessage(message);
-      port.onDisconnect = (err) => {
-        console.error("disconnected with this error: ", err);
-      };
-    }
-  });
-}
-
-
 function onUpdatedTabCallback(tabId, changeInfo, tab) {
-  if (onUpdatedTabState.unloaded === changeInfo.status){
+  if (onUpdatedTabState.unloaded == changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.unloaded;
   }
 
-  if (onUpdatedTabState.loading === changeInfo.status){
+  if (onUpdatedTabState.loading == changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.loading;
   }
 
-  if (onUpdatedTabState.complete === changeInfo.status){
+  
+  if (onUpdatedTabState.complete == changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.complete;
     let encodedUrlBase64 = Base64.encode(tab.url);
     fetchAnnotationsForUrlKey(encodedUrlBase64);
   }
 }
-
-
-function sendMessageAfterContextMenuClick(message) {
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    if (tabs.length > 0) {
-      var tab = tabs[0];
-      const port = chrome.tabs.connect(tab.id);
-      port.postMessage(message);
-      port.onDisconnect = (err) => {
-        console.error("disconnected " + err);
-      };
-    }
-  });
-}
-
 
 function onClickContextMenusCallback(onClickData, tab) {
   if (constants.highlightColorChoices.includes(onClickData.menuItemId)) {
@@ -156,9 +125,10 @@ function onClickContextMenusCallback(onClickData, tab) {
         pageUrl: onClickData.pageUrl,
       },
     };
-    if(!(message.annotationObj.pageUrl in urls)) urls[message.annotationObj.pageUrl] = 1;
+    if (!(message.annotationObj.pageUrl in urls))
+      urls[message.annotationObj.pageUrl] = 1;
     else urls[message.annotationObj.pageUrl]++;
-    
+
     arrayOfAnnotationObjs.push(message.annotationObj);
     console.log(`urls: ${JSON.stringify(urls)}
                 annotationArray: ${JSON.stringify(arrayOfAnnotationObjs)}`);
@@ -205,6 +175,34 @@ function createContextMenusCallback() {
   );
 }
 
+function runPortMessagingConnection(message) {
+  let queryOptions = { lastFocusedWindow: true, active: true };
+  // `tab` will either be a `tabs.Tab` instance or `undefined`
+  // chrome.tabs.query returns a Promise object
+  chrome.tabs.query(queryOptions, (tabs) => {
+    if (tabs && tabs.length > 0) {
+      let tab = tabs[0];
+      const port = chrome.tabs.connect(tab.id);
+      port.postMessage(message);
+      port.onDisconnect = (err) => {
+        console.error("disconnected with this error: ", err);
+      };
+    }
+  });
+}
+
+function sendMessageAfterContextMenuClick(message) {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (tabs.length > 0) {
+      var tab = tabs[0];
+      const port = chrome.tabs.connect(tab.id);
+      port.postMessage(message);
+      port.onDisconnect = (err) => {
+        console.error("disconnected " + err);
+      };
+    }
+  });
+}
 
 // chrome.tabs API listens and sends messages to and from content scripts
 // chrome.runtime API
@@ -224,13 +222,12 @@ chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 
 // listening for messages from chrome extension popup.js or contentScript.js
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if(constants.actions.saveAnnotations === message.action){
+  if (constants.actions.saveAnnotations === message.action) {
     saveAnnotations(message.data);
   }
-  if(constants.actions.fetchAnnotations === message.action){
+  if (constants.actions.fetchAnnotations === message.action) {
     let encodedUrlBase64 = Base64.encode(message.data.pageUrl);
     fetchAnnotationsForUrlKey(encodedUrlBase64);
   }
   sendResponse("saved annotations in background script to chrome storage");
 });
-
