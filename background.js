@@ -8,35 +8,77 @@ background.js can communicate with the extension through the Chrome messaging AP
 This script listens to and responds to events that happen in the web page and browser window
 like context menu clicks, tab updates, and extension installation.
 */
-/* global variable declarations and assignments */
 
 import { constants } from "./constants.js";
+import { Base64 } from "./base64.js";
 
-/* ----------- getter functions ----------------- */
+let onUpdatedTabStatus = null;
+const onUpdatedTabState = {
+  unloaded: "unloaded",
+  loading: "loading",
+  complete: "complete"
+};
+
+let urlsAndAnnotations = {};
+let urls = {};  // hashmap of url with count of annoation objs with that url
+let arrayOfAnnotationObjs = [];
+
+// setInterval(createObjOfUrlsAndAnnotations, 10000);
+
+function createObjOfUrlsAndAnnotations(){
+  let tempArray = [];
+  if(arrayOfAnnotationObjs.length > 0){
+    for (let annotation of arrayOfAnnotationObjs){
+      while(urls[annotation.pageUrl]){
+        console.log(urls[annotation.pageUrl]);
+        urlsAndAnnotations[annotation.pageUrl] = tempArray.push(annotation);
+        annotationCountsForUrl[annotation.pageUrl]--;
+      }
+      console.log(JSON.stringify(urlsAndAnnotations));
+    }
+    return true;
+  } else return false;
+}
+  
+function getActiveTabUrl(){
+  let queryOptions = { active: true, currentWindow: true }
+  chrome.tabs.query(queryOptions, (tabs) => {
+    if(tabs.length > 0){
+      let activeTab = tabs[0];
+      return activeTab.url;
+    }
+  });
+}
 
 function getUUID() {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
-// TODO: implement this function
-function getActiveTabWindow(){
-  let queryOptions = { lastFocusedWindow: true, active: true };
-  chrome.tabs.query
-  return
+function saveAnnotations(annotationObjs){
+  let encodedUrlBase64 = Base64.encode(annotationObjs.pageUrl);
+  let obj = {
+    [encodedUrlBase64]: annotationObjs
+  }
+  chrome.storage.sync.set(obj, (response) => {
+    console.log(`chrome storage sync set response: ${response}`);
+  });
 }
 
-function fetchAnnotationsForUrlKey(encodedUrlAsKey) {
+function fetchAnnotationsForUrlKey(encodedUrlBase64) {
   // url: string
   // url is stored as a string in the tab object
-  chrome.storage.sync.get(encodedUrlAsKey, (annotationObjsForUrl) => {
-    if (annotationObjsForUrl) {
+  chrome.storage.sync.get(encodedUrlBase64, (annotationObjsForUrl) => {
+    if(Object.keys(annotationObjsForUrl).length > 0) {
       let message = {
-        context: constants.context.onUpdateTabComplete,
+        context: constants.context.onUpdatedTabComplete,
         action: constants.actions.addAnnotationsForUrlToDom,
-        annotationsObjsForUrl: annotationObjsForUrl,
+        annotationsObjsForUrl: annotationObjsForUrl
       };
       runPortMessagingConnection(message);
-    } else console.log(`No annotations stored for ${url}`);
+    } else {
+      let url = Base64.decode(encodedUrlBase64);
+      console.log(`No annotations stored for ${url}`);
+    }
   });
 }
 
@@ -50,9 +92,7 @@ function fetchAnnotationsForUrlKey(encodedUrlAsKey) {
 //   }
 // }
 
-/* ----------- end of getter functions ---------- */
 
-/* messaging function */
 function runPortMessagingConnection(message) {
   let queryOptions = { lastFocusedWindow: true, active: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`
@@ -69,28 +109,27 @@ function runPortMessagingConnection(message) {
   });
 }
 
-/* end: messaging function */
-
-/* callback handler functions */
 
 function onUpdatedTabCallback(tabId, changeInfo, tab) {
-  if (changeInfo.status === "complete") {
-    // What to do when the tab is completely updated?
+  if (onUpdatedTabState.unloaded === changeInfo.status){
+    onUpdatedTabStatus = onUpdatedTabState.unloaded;
+  }
+
+  if (onUpdatedTabState.loading === changeInfo.status){
+    onUpdatedTabStatus = onUpdatedTabState.loading;
+  }
+
+  if (onUpdatedTabState.complete === changeInfo.status){
+    onUpdatedTabStatus = onUpdatedTabState.complete;
+    let encodedUrlBase64 = Base64.encode(tab.url);
+    fetchAnnotationsForUrlKey(encodedUrlBase64);
   }
 }
 
-/* info object passed when contextMenu item is clicked
-  callback parameters include: (info: OnClickData, tab?: tabs.Tab)
-  info = { // of these the menuItemId is required
-      menuItemId: string or int: the ID of the menu item that was clicked,
-      pageUrl: string: The URL of the page where the menu item was clicked. This property is not set if the click occured in a context where there is no current page, such as in a launcher context menu.,
-      selectionText: string: The text for the context selection, if any.,
-      srcUrl: string: Will be present for elements with a 'src' URL.
-    } */
 
 function sendMessageAfterContextMenuClick(message) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    if (tabs) {
+    if (tabs.length > 0) {
       var tab = tabs[0];
       const port = chrome.tabs.connect(tab.id);
       port.postMessage(message);
@@ -101,17 +140,9 @@ function sendMessageAfterContextMenuClick(message) {
   });
 }
 
-/* info object passed when contextMenu item is clicked
-  callback parameters include: (info: OnClickData, tab?: tabs.Tab)
-  info = { // of these the menuItemId is required
-      menuItemId: string or int: the ID of the menu item that was clicked,
-      pageUrl: string: The URL of the page where the menu item was clicked. This property is not set if the click occured in a context where there is no current page, such as in a launcher context menu.,
-      selectionText: string: The text for the context selection, if any.,
-      srcUrl: string: Will be present for elements with a 'src' URL.
-    } */
+
 function onClickContextMenusCallback(onClickData, tab) {
   if (constants.highlightColorChoices.includes(onClickData.menuItemId)) {
-    // annotation data model object
     let message = {
       context: constants.context.onUpdatedTabComplete,
       action: constants.actions.highlightSelectedText,
@@ -125,13 +156,16 @@ function onClickContextMenusCallback(onClickData, tab) {
         pageUrl: onClickData.pageUrl,
       },
     };
-    // alert(JSON.stringify(message));
+    if(!(message.annotationObj.pageUrl in urls)) urls[message.annotationObj.pageUrl] = 1;
+    else urls[message.annotationObj.pageUrl]++;
+    
+    arrayOfAnnotationObjs.push(message.annotationObj);
+    console.log(`urls: ${JSON.stringify(urls)}
+                annotationArray: ${JSON.stringify(arrayOfAnnotationObjs)}`);
     sendMessageAfterContextMenuClick(message);
   }
 }
 
-// callback function for context menu create functions
-// if error occured, chrome.runtime.lastError will include it
 function contextMenusCreateCallback() {
   if (!chrome.runtime.lastError) return;
   console.log("context menu create error: " + chrome.runtime.lastError);
@@ -171,15 +205,12 @@ function createContextMenusCallback() {
   );
 }
 
-/* end: handler functions */
 
-/* listeners */
 // chrome.tabs API listens and sends messages to and from content scripts
 // chrome.runtime API
 // chrome.tabs.onActivated.addListener(activatedTabHandler);
 
 // listening for a new tab opened or to a new URL typed in a tab
-// chrome.tabs.
 chrome.tabs.onUpdated.addListener(onUpdatedTabCallback);
 
 // on drag end listener
@@ -192,6 +223,14 @@ chrome.contextMenus.onClicked.addListener(onClickContextMenusCallback);
 chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 
 // listening for messages from chrome extension popup.js or contentScript.js
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {});
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if(constants.actions.saveAnnotations === message.action){
+    saveAnnotations(message.data);
+  }
+  if(constants.actions.fetchAnnotations === message.action){
+    let encodedUrlBase64 = Base64.encode(message.data.pageUrl);
+    fetchAnnotationsForUrlKey(encodedUrlBase64);
+  }
+  sendResponse("saved annotations in background script to chrome storage");
+});
 
-/* end: listeners */

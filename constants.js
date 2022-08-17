@@ -1,6 +1,7 @@
 export const constants = {
   highlightColorChoices: ["yellow", "red", "blue", "green", "white", "grey"],
   context: {
+    onClickLoadAnnotationsButtonExtensionPopup: "on-click-load-annotations-button-extension-popup",
     onUpdatedTabComplete: "on-updated-tab-complete",
     onClickContextMenuItem: "on-click-context-menu-item",
   },
