@@ -7,12 +7,33 @@ in the background.js service worker script, which handles the events on the web 
 This popup.js script handles the events on the Chrome extension popup: popup.html
 */
 
+import { constants } from './constants.js';
+
 let activeTab = null;
 let annotationTestText = document.getElementById("annotation-test-text");
 let annotationTestComment = document.getElementById("annotation-test-comment");
 
 const searchButton = document.getElementById("search-button");
 const searchInput = document.getElementById("search-input");
+
+
+function onClickLoadAnnotations(){
+  let message = {
+    context: constants.context.onClickLoadAnnotationsButtonExtensionPopup,
+    action: constants.actions.fetchAnnotations,
+    data: {
+      
+    }
+  };
+
+  sendMessagePopupScript(message);
+}
+
+function sendMessagePopupScript(message){
+  chrome.runtime.sendMessage(message, (response) => {
+    console.log(`response from messaging system popup script: ${response}`);
+  });
+}
 
 // async function getActiveTab() {
 //   const tabs = await chrome.tabs.query({

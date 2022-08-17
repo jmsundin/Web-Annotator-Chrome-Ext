@@ -35,6 +35,18 @@ function getChromeExtensionAssets() {
   // chrome.runtime.getURL("./assets/file-name");
 }
 
+// let annotationObjsForUrlExist = setInterval(doAnnotationObjsForUrlExist, 10000);
+
+function doAnnotationObjsForUrlExist(){
+  if(annotationObjsForUrl.length > 0){
+    let action = constants.actions.saveAnnotations;
+    let data = annotationObjsForUrl;
+    contentScriptSendMessage(action, data) 
+    return true;
+  }
+  else return false;
+}
+
 /* search functions */
 
 // a declared function can be `hoisted` to the top of this file at runtime and thus can be called anywhere in the file
@@ -65,11 +77,6 @@ function decodeBase64Url(encodedUrlBase64){
   return window.atob(encodedUrlBase64);
 }
 
-// TODO: implement save annotations in batch
-// function saveAnnotationsForActiveTab(annotationObj) {
-// let action = annotationObj.action[1]; // second item in array is saveAnnotation action
-//   contentScriptSendMessage(action, annotationObj);
-// }
 
 // TODO: add this function into addAnnotationsForUrlIntoPopover()
 function onClickAddComment() {
@@ -83,7 +90,7 @@ function addAnnotationsForUrlIntoPopover() {
     for (let annotation of annotationObjsForUrl) {
       let annotationElement = document.createElement("div");
       annotationElement.className = "sifter-annotation";
-      annotationElement.innerHTML = annotation.data.selectionText;
+      annotationElement.innerHTML = annotation.selectionText;
 
       let annotationCommentInput = document.createElement("input");
       annotationCommentInput.setAttribute("type", "input");
@@ -226,9 +233,9 @@ function createAnnotationPopover() {
   }
 }
 
-function addAnnotationsForUrlToDom(message) {
-  let annotationObjsForUrl = message.annotationsForUrl;
-  if (annotationObjsForUrl.length > 1) {
+// TODO: implement after saving to chrome storage
+function addAnnotationsForUrlToDom(annotationsObjsForUrl) {
+  if (annotationsObjsForUrl.length > 1) {
     for (let annotation of annotationObjsForUrl) {
       addSpanElementToDom(createSpanElement(annotation));
     }
@@ -236,8 +243,6 @@ function addAnnotationsForUrlToDom(message) {
     // only one annotation obj, thus no loop necessary
     addSpanElementToDom(createSpanElement(annotationObjsForUrl));
   }
-
-  addSpanElementToDom();
 }
 
 // called from highlightSelectedText
@@ -258,16 +263,6 @@ function addSpanElementToDom(spanElement) {
   }
 }
 
-/*
-annotationObj: {
-        id: getUUID(),
-        highlightColor: onClickData.menuItemId,
-        selectionText: onClickData.selectionText,
-        srcUrl: onClickData.srcUrl,
-        comment: "",
-        urlTitle: tab.title,
-        pageUrl: onClickData.pageUrl,
-*/
 function createSpanElement(annotationObj) {
   let spanElement = document.createElement("span");
   spanElement.id = annotationObj.id;  // id: string
@@ -292,6 +287,9 @@ function highlightSelectedText(annotationObj) {
     createAnnotationPopover();
     annotationObjsForUrl.push(annotationObj); // global value of annotation objs for the url
     addAnnotationsForUrlIntoPopover();
+    let action = constants.actions.saveAnnotations;
+    let data = annotationObj;
+    contentScriptSendMessage(action, data)
   }
 }
 
@@ -328,12 +326,15 @@ background.js (service worker) and content-script.js
 */
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
-    if (message.action === constants.actions.highlightSelectedText) {
+    if (constants.actions.highlightSelectedText === message.action) {
       highlightSelectedText(message.annotationObj);
     }
-    if (message.action === constants.actions.addAnnotationsForUrlToDom) {
-      addAnnotationsForUrlToDom(message.annotationObjs);
+    if (constants.actions.addAnnotationsForUrlToDom === message.action) {
+      addAnnotationsForUrlToDom(message.annotationsObjsForUrl);
     }
+    // if (message.action === constants.actions.fetchAnnotations){
+      
+    // }
   });
 });
 
@@ -385,13 +386,4 @@ function contentScriptSendMessage(action, data) {
 // stored in chrome storage or later the cloud
 window.addEventListener('DOMContentLoaded', (event) => {
   // What to do when DOM content is loaded?
-});
-
-// fired when a connection is made from either an extension process or a content script
-chrome.runtime.onConnect.addListener((event) => {
-  alert(`end of content script: dom content loaded ${event}`);
-  let activeTabUrl = getActiveTabUrl();
-  const encodedUrlAsKey = encodeUrlBase64(activeTabUrl);
-  let action = constants.actions.fetchAnnotations;
-  contentScriptSendMessage(action, encodedUrlAsKey);
 });
