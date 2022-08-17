@@ -330,38 +330,6 @@ function sifterNextHighlight(event) {
   }, 300);
 }
 
-/* end of messaging callback functions */
-
-/* listeners */
-
-/* message listeners */
-
-/* 
-messaging between extension processes in the chrome runtime, not the web page runtime 
-background.js (service worker) and content-script.js
-*/
-chrome.runtime.onConnect.addListener((port) => {
-  port.onMessage.addListener((message) => {
-    if (constants.actions.highlightSelectedText === message.action) {
-      if(Object.keys(message.annotationsObjsForUrl) > 0){
-        // TODO: what way to optimize checking how many annotation objects there are?
-        // property lookups later down the call stack have the wrong properties...
-      }
-      let annotationObj = message.annotationObj
-      highlightSelectedText(message.annotationObj);
-    }
-    if (constants.actions.addAnnotationsForUrlToDom === message.action) {
-      addAnnotationsForUrlToDom(message.annotationsObjsForUrl);
-    }
-    // if (message.action === constants.actions.fetchAnnotations){
-
-    // }
-  });
-});
-
-/* end of message listeners */
-
-/* sending messages from contentScript */
 // TODO: send array/batch of annotation objects to save to chrome storage
 function contentScriptSendMessage(action, data) {
   if (action === constants.actions.saveAnnotations) {
@@ -379,6 +347,7 @@ function contentScriptSendMessage(action, data) {
       );
     });
   }
+
   // window.atob function decodes the base64 back to the url string
   // window.btoa function encodes the url string to base64
   if (constants.actions.fetchAnnotations === action) {
@@ -406,3 +375,27 @@ function contentScriptSendMessage(action, data) {
 // window.addEventListener("DOMContentLoaded", (event) => {
 //   // What to do when DOM content is loaded?
 // });
+
+
+/* 
+messaging between extension processes in the chrome runtime, not the web page runtime 
+background.js (service worker) and content-script.js
+*/
+chrome.runtime.onConnect.addListener((port) => {
+  port.onMessage.addListener((message) => {
+    if (constants.actions.highlightSelectedText === message.action) {
+      if(Object.keys(message.annotationsObjsForUrl) > 0){
+        // TODO: what way to optimize checking how many annotation objects there are?
+        // property lookups later down the call stack have the wrong properties...
+      }
+      let annotationObj = message.annotationObj
+      highlightSelectedText(message.annotationObj);
+    }
+    if (constants.actions.addAnnotationsForUrlToDom === message.action) {
+      addAnnotationsForUrlToDom(message.annotationsObjsForUrl);
+    }
+    // if (message.action === constants.actions.fetchAnnotations){
+
+    // }
+  });
+});

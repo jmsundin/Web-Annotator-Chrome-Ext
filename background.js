@@ -75,10 +75,11 @@ function fetchAnnotationsForUrlKey(encodedUrlBase64) {
         action: constants.actions.addAnnotationsForUrlToDom,
         annotationsObjsForUrl: annotationObjsForUrl,
       };
+      console.log(`Successfully fetched annotations: ${JSON.stringify(annotationObjsForUrl)}`);
       runPortMessagingConnection(message);
     } else {
       let url = Base64.decode(encodedUrlBase64);
-      console.log(`No annotations stored for ${url}`);
+      throw `No annotations exist for ${url}`;
     }
   });
 }
@@ -106,7 +107,11 @@ function onUpdatedTabCallback(tabId, changeInfo, tab) {
   if (onUpdatedTabState.complete == changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.complete;
     let encodedUrlBase64 = Base64.encode(tab.url);
-    fetchAnnotationsForUrlKey(encodedUrlBase64);
+    try{
+      fetchAnnotationsForUrlKey(encodedUrlBase64);
+    }catch(error){
+      console.error(`${error}`);
+    }
   }
 }
 
