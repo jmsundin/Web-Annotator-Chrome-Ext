@@ -37,14 +37,13 @@ function getChromeExtensionAssets() {
 
 // let annotationObjsForUrlExist = setInterval(doAnnotationObjsForUrlExist, 10000);
 
-function doAnnotationObjsForUrlExist(){
-  if(annotationObjsForUrl.length > 0){
+function doAnnotationObjsForUrlExist() {
+  if (Object.keys(annotationObjsForUrl).length > 0) {
     let action = constants.actions.saveAnnotations;
     let data = annotationObjsForUrl;
-    contentScriptSendMessage(action, data) 
+    contentScriptSendMessage(action, data);
     return true;
-  }
-  else return false;
+  } else return false;
 }
 
 /* search functions */
@@ -59,24 +58,25 @@ function searchDOM(searchString) {
   }
 }
 
-function getActiveTabUrl(){
-  let queryOptions = { active: true, currentWindow: true }
+function getActiveTabUrl() {
+  let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {
-    if(tabs){
+    try {
       let activeTab = tabs[0];
       return activeTab.url;
+    } catch(error){
+      console.error(`getting active tab url error: ${error}`);
     }
   });
 }
 
-function encodeUrlBase64(url){
+function encodeUrlBase64(url) {
   return window.btoa(url);
 }
 
-function decodeBase64Url(encodedUrlBase64){
+function decodeBase64Url(encodedUrlBase64) {
   return window.atob(encodedUrlBase64);
 }
-
 
 // TODO: add this function into addAnnotationsForUrlIntoPopover()
 function onClickAddComment() {
@@ -233,15 +233,27 @@ function createAnnotationPopover() {
   }
 }
 
-// TODO: implement after saving to chrome storage
+
 function addAnnotationsForUrlToDom(annotationsObjsForUrl) {
-  if (annotationsObjsForUrl.length > 1) {
+  if (Object.keys(annotationsObjsForUrl).length > 1) {
     for (let annotation of annotationObjsForUrl) {
       addSpanElementToDom(createSpanElement(annotation));
     }
   } else {
     // only one annotation obj, thus no loop necessary
-    addSpanElementToDom(createSpanElement(annotationObjsForUrl));
+    let spanElement = null;
+    try {
+      spanElement = createSpanElement(annotationsObjsForUrl);
+    }catch(error){
+      console.error(`creating span element error: ${error}`);
+    }
+    try{
+      if(!spanElement){
+        addSpanElementToDom();
+      }
+    }catch(error){
+      console.error(`adding span element to DOM error: ${error}`);
+    }
   }
 }
 
@@ -265,11 +277,11 @@ function addSpanElementToDom(spanElement) {
 
 function createSpanElement(annotationObj) {
   let spanElement = document.createElement("span");
-  spanElement.id = annotationObj.id;  // id: string
+  spanElement.id = annotationObj.id; // id: string
   spanElement.className = "sifter-annotation";
   spanElement.style.backgroundColor = annotationObj.highlightColor;
   // add comment to spanElement.dataset to grab it for hover-over comment viewing functionality later
-  spanElement.dataset.comment = annotationObj.comment; 
+  spanElement.dataset.comment = annotationObj.comment;
   return spanElement;
 }
 
@@ -279,7 +291,11 @@ function highlightSelectedText(annotationObj) {
   // requested color from the context menu
   let spanElement = createSpanElement(annotationObj);
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
-  addSpanElementToDom(spanElement);
+  try {
+    addSpanElementToDom(spanElement);
+  } catch (error) {
+    console.error(`unable to add span element to DOM: error thrown: ${error}`);
+  }
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
@@ -289,7 +305,7 @@ function highlightSelectedText(annotationObj) {
     addAnnotationsForUrlIntoPopover();
     let action = constants.actions.saveAnnotations;
     let data = annotationObj;
-    contentScriptSendMessage(action, data)
+    contentScriptSendMessage(action, data);
   }
 }
 
@@ -327,13 +343,18 @@ background.js (service worker) and content-script.js
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
     if (constants.actions.highlightSelectedText === message.action) {
+      if(Object.keys(message.annotationsObjsForUrl) > 0){
+        // TODO: what way to optimize checking how many annotation objects there are?
+        // property lookups later down the call stack have the wrong properties...
+      }
+      let annotationObj = message.annotationObj
       highlightSelectedText(message.annotationObj);
     }
     if (constants.actions.addAnnotationsForUrlToDom === message.action) {
       addAnnotationsForUrlToDom(message.annotationsObjsForUrl);
     }
     // if (message.action === constants.actions.fetchAnnotations){
-      
+
     // }
   });
 });
@@ -346,37 +367,35 @@ function contentScriptSendMessage(action, data) {
   if (action === constants.actions.saveAnnotations) {
     let annotationObjs = data;
     let message = {
-      action: constants.actions.saveAnnotations, 
-      data: annotationObjs
-    }
-    chrome.runtime.sendMessage( message, (response) => {
-        if (!response) return;
+      action: constants.actions.saveAnnotations,
+      data: annotationObjs,
+    };
+    chrome.runtime.sendMessage(message, (response) => {
+      if (!response) return;
+      console.log(
+        `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
+          response
+        )}`
+      );
+    });
+  }
+  // window.atob function decodes the base64 back to the url string
+  // window.btoa function encodes the url string to base64
+  if (constants.actions.fetchAnnotations === action) {
+    let encodedUrlAsKey = data;
+    let message = {
+      action: constants.actions.fetchAnnotations,
+      data: encodedUrlAsKey,
+    };
+    chrome.runtime.sendMessage(message, (response) => {
+      if(response) return response;
+      else
         console.log(
           `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
             response
           )}`
         );
-      }
-    );
-  }
-  // window.atob function decodes the base64 back to the url string
-  // window.btoa function encodes the url string to base64
-  if (action === constants.actions.fetchAnnotations) {
-    let encodedUrlAsKey = data;
-    let message = {
-      action: constants.actions.fetchAnnotations, 
-      data: encodedUrlAsKey
-    }
-    chrome.runtime.sendMessage( message, (response) => {
-        if (response) return response;
-        else
-          console.log(
-            `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
-              response
-            )}`
-          );
-      }
-    );
+    });
   }
 }
 
@@ -384,6 +403,6 @@ function contentScriptSendMessage(action, data) {
 // encode the url as a base64 string
 // that string is the key to fetch any annotations in the page
 // stored in chrome storage or later the cloud
-window.addEventListener('DOMContentLoaded', (event) => {
-  // What to do when DOM content is loaded?
-});
+// window.addEventListener("DOMContentLoaded", (event) => {
+//   // What to do when DOM content is loaded?
+// });
