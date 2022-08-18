@@ -11,21 +11,19 @@ This script contains any UI that is not the extension popup UI
 const constants = {
   highlightColorChoices: ["yellow", "red", "blue", "green", "white", "grey"],
   context: {
+    onClickLoadDataButtonExtensionPopup: "on-click-load-data-button-extension-popup",
     onUpdatedTabComplete: "on-updated-tab-complete",
     onClickContextMenuItem: "on-click-context-menu-item",
   },
   actions: {
     highlightSelectedText: "highlight-selected-text",
-    addAnnotationsForUrlToDom: "add-annotations-for-url-to-dom",
-    saveAnnotations: "save-annotations-to-chrome-storage",
-    fetchAnnotations: "fetch-annotations-from-chrome-storage",
+    addDataForUrlToDom: "add-data-for-active-url-to-dom",
+    saveData: "save-data-to-chrome-storage",
+    fetchData: "fetch-data-from-chrome-storage",
   },
 };
 
-let annotationPopover = null;
-
-// highlighted elements in page
-let annotationObjsForUrl = [];
+let sifterWebPagePopover = null;
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
@@ -36,15 +34,6 @@ function getChromeExtensionAssets() {
 }
 
 // let annotationObjsForUrlExist = setInterval(doAnnotationObjsForUrlExist, 10000);
-
-function doAnnotationObjsForUrlExist() {
-  if (Object.keys(annotationObjsForUrl).length > 0) {
-    let action = constants.actions.saveAnnotations;
-    let data = annotationObjsForUrl;
-    contentScriptSendMessage(action, data);
-    return true;
-  } else return false;
-}
 
 /* search functions */
 
@@ -78,43 +67,58 @@ function decodeBase64Url(encodedUrlBase64) {
   return window.atob(encodedUrlBase64);
 }
 
-// TODO: add this function into addAnnotationsForUrlIntoPopover()
+function getWindowSelectionRange(){
+  if (window.getSelection) {
+    let selection = window.getSelection();
+    if (selection.rangeCount) {
+      return selection.getRangeAt(0).cloneRange();
+    }
+  }
+}
+
+function getSelectionRangeData(range){
+  // TODO: implement getSelectionRangeData
+}
+
+function findSelectionRangeFromStoredData(){
+  // TODO: implement findSelectionRangeFromStoredData
+}
+
+// TODO: add this function into addDataForUrlIntoPopover()
 function onClickAddComment() {
   let textInput = document.getElementById("input_text").value;
   let commentElement = document.getElementById("comment_text");
   commentElement.innerText = textInput;
 }
 
-function addAnnotationsForUrlIntoPopover() {
-  if (annotationPopover && annotationObjsForUrl) {
-    for (let annotation of annotationObjsForUrl) {
-      let annotationElement = document.createElement("div");
-      annotationElement.className = "sifter-annotation";
-      annotationElement.innerHTML = annotation.selectionText;
+function addDataForUrlIntoPopover(annotation) {
+  if (sifterWebPagePopover && annotation) {
+    let annotationElement = document.createElement("div");
+    annotationElement.className = "sifter-annotation";
+    annotationElement.innerHTML = annotation.selectionText;
 
-      let annotationCommentInput = document.createElement("input");
-      annotationCommentInput.setAttribute("type", "input");
-      annotationCommentInput.setAttribute("placeholder", "Add a comment");
+    let annotationCommentInput = document.createElement("input");
+    annotationCommentInput.setAttribute("type", "input");
+    annotationCommentInput.setAttribute("placeholder", "Add a comment");
 
-      annotationPopover.appendChild(annotationElement);
-      annotationPopover.appendChild(annotationCommentInput);
+    sifterWebPagePopover.appendChild(annotationElement);
+    sifterWebPagePopover.appendChild(annotationCommentInput);
 
-      let commentInput = document.createElement("input");
-      commentInput.setAttribute("id", "input_text");
-      commentInput.setAttribute("type", "text");
-      commentInput.setAttribute("placeholder", "Add a comment");
+    let commentInput = document.createElement("input");
+    commentInput.setAttribute("id", "input_text");
+    commentInput.setAttribute("type", "text");
+    commentInput.setAttribute("placeholder", "Add a comment");
 
-      let commentSubmit = document.createElement("button");
-      commentSubmit.setAttribute("onclick", "onClickAddComment()");
-      commentSubmit.innerHTML = "Add";
+    let commentSubmit = document.createElement("button");
+    commentSubmit.setAttribute("onclick", "onClickAddComment()");
+    commentSubmit.innerHTML = "Add";
 
-      let commentElement = document.createElement("p");
-      commentElement.setAttribute("id", "comment_text");
+    let commentElement = document.createElement("p");
+    commentElement.setAttribute("id", "comment_text");
 
-      document.body.appendChild(commentInput);
-      document.body.appendChild(commentSubmit);
-      document.body.appendChild(commentElement);
-    }
+    document.body.appendChild(commentInput);
+    document.body.appendChild(commentSubmit);
+    document.body.appendChild(commentElement);
   }
 }
 
@@ -161,34 +165,34 @@ function dragElement(div) {
 }
 
 /*
-CreateAnnotationPopover is called when span element annotation is added to the DOM
+CreateSifterWebPagePopover is called when span element annotation is added to the DOM
 */
-function createAnnotationPopover() {
-  if (annotationPopover === null) {
-    annotationPopover = document.createElement("div");
-    annotationPopover.id = "annotationPopover";
-    annotationPopover.style.width = "400px";
-    annotationPopover.style.height = "300px";
-    annotationPopover.style.userSelect = "none";
-    annotationPopover.style.display = "block";
-    annotationPopover.style.position = "fixed";
-    annotationPopover.style.zIndex = 200000;
-    annotationPopover.style.margin = "0px";
-    annotationPopover.style.userSelect = "none";
-    annotationPopover.style.fontFamily = '"avenir next",Helvetica';
-    annotationPopover.style.right = "8px";
-    annotationPopover.style.bottom = "8px";
-    annotationPopover.style.borderRadius = "8px";
-    annotationPopover.style.boxShadow = "0 0 2px black";
-    annotationPopover.style.color = "black";
-    annotationPopover.textContent = "";
-    annotationPopover.style.textAlign = "center";
+function createSifterWebPagePopover() {
+  if (sifterWebPagePopover === null) {
+    sifterWebPagePopover = document.createElement("div");
+    sifterWebPagePopover.id = "sifterWebPagePopover";
+    sifterWebPagePopover.style.width = "400px";
+    sifterWebPagePopover.style.height = "300px";
+    sifterWebPagePopover.style.userSelect = "none";
+    sifterWebPagePopover.style.display = "block";
+    sifterWebPagePopover.style.position = "fixed";
+    sifterWebPagePopover.style.zIndex = 200000;
+    sifterWebPagePopover.style.margin = "0px";
+    sifterWebPagePopover.style.userSelect = "none";
+    sifterWebPagePopover.style.fontFamily = '"avenir next",Helvetica';
+    sifterWebPagePopover.style.right = "8px";
+    sifterWebPagePopover.style.bottom = "8px";
+    sifterWebPagePopover.style.borderRadius = "8px";
+    sifterWebPagePopover.style.boxShadow = "0 0 2px black";
+    sifterWebPagePopover.style.color = "black";
+    sifterWebPagePopover.textContent = "";
+    sifterWebPagePopover.style.textAlign = "center";
 
-    annotationPopover.style.fontSize = "14px";
-    annotationPopover.style.fontWeight = "bold";
-    annotationPopover.style.color = "black";
-    annotationPopover.style.backgroundColor = "#E3E3E3";
-    annotationPopover.style.padding = "8px 16px";
+    sifterWebPagePopover.style.fontSize = "14px";
+    sifterWebPagePopover.style.fontWeight = "bold";
+    sifterWebPagePopover.style.color = "black";
+    sifterWebPagePopover.style.backgroundColor = "#E3E3E3";
+    sifterWebPagePopover.style.padding = "8px 16px";
 
     let dragheaderPopover = document.createElement("div");
     dragheaderPopover.id = "dragheader";
@@ -197,17 +201,17 @@ function createAnnotationPopover() {
     dragheaderPopover.style.fontSize = "16px";
     dragheaderPopover.style.backgroundColor = "#C8CACB";
     dragheaderPopover.textContent = "Sifter Annotator";
-    annotationPopover.appendChild(dragheaderPopover);
-    var annotationPopoverCaption = document.createElement("div");
-    annotationPopoverCaption.addEventListener("mousedown", (event) =>
+    sifterWebPagePopover.appendChild(dragheaderPopover);
+    var sifterPopoverCaption = document.createElement("div");
+    sifterPopoverCaption.addEventListener("mousedown", (event) =>
       sifterNextHighlight(event)
     );
-    annotationPopoverCaption.title = "Click to navigate in highlights";
-    annotationPopoverCaption.id = "annotationPopoverCaption";
-    annotationPopoverCaption.style.cursor = "pointer";
-    annotationPopoverCaption.style.userSelect = "none";
-    annotationPopoverCaption.textContent = "";
-    annotationPopover.appendChild(annotationPopoverCaption);
+    sifterPopoverCaption.title = "Click to navigate in highlights";
+    sifterPopoverCaption.id = "sifterPopoverCaption";
+    sifterPopoverCaption.style.cursor = "pointer";
+    sifterPopoverCaption.style.userSelect = "none";
+    sifterPopoverCaption.textContent = "";
+    sifterWebPagePopover.appendChild(sifterPopoverCaption);
 
     let close = document.createElement("div");
     close.textContent = "✕";
@@ -220,79 +224,63 @@ function createAnnotationPopover() {
     close.style.color = "black";
     close.backgroundColor = "#C8CACB";
     close.style.cursor = "pointer";
-    close.addEventListener(
-      "click",
-      function () {
-        annotationPopover.style.display = "none";
+    close.addEventListener("click", () => {
+        sifterWebPagePopover.style.display = "none";
       },
       false
     );
-    annotationPopover.appendChild(close);
-    document.body.appendChild(annotationPopover);
-    dragElement(annotationPopover);
+    sifterWebPagePopover.appendChild(close);
+    document.body.appendChild(sifterWebPagePopover);
+    dragElement(sifterWebPagePopover);
   }
 }
 
+function addSpanElementToDom(selectedTextRange, spanElement){
+  if(!selectedTextRange) return;
+  let documentFragment = selectedTextRange.extractContents();
+  spanElement.appendChild(documentFragment);
+  selectedTextRange.insertNode(spanElement);
+}
 
-function addAnnotationsForUrlToDom(annotationsObjsForUrl) {
-  if (Object.keys(annotationsObjsForUrl).length > 1) {
-    for (let annotation of annotationObjsForUrl) {
-      addSpanElementToDom(createSpanElement(annotation));
-    }
-  } else {
-    // only one annotation obj, thus no loop necessary
-    let spanElement = null;
-    try {
-      spanElement = createSpanElement(annotationsObjsForUrl);
-    }catch(error){
-      console.error(`creating span element error: ${error}`);
-    }
-    try{
-      if(!spanElement){
-        addSpanElementToDom();
-      }
-    }catch(error){
-      console.error(`adding span element to DOM error: ${error}`);
-    }
+
+function addDataForUrlToDom(data) {
+  let spanElement = null;
+  try {
+    spanElement = createSpanElement(data);
+  }catch(error) {
+    console.error(`creating span element error: ${error}`);
+  }
+  try {
+    if (spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
+  }catch(error){
+    console.error(`adding span element to DOM error: ${error}`);
   }
 }
 
-// called from highlightSelectedText
-function addSpanElementToDom(spanElement) {
-  if (window.getSelection) {
-    let selection = window.getSelection();
-    if (selection.rangeCount) {
-      let selectedTextRange = selection.getRangeAt(0).cloneRange();
-      // surroundContents method moves the contents of the selected range into the new spanElement
-      // placing the new spanElement Node at the start of the range
-      // the new boundaries of the range include the new spanElement Node added
-      selectedTextRange.surroundContents(spanElement);
-      // removing the contents of the original selectedText range
-      selection.removeAllRanges();
-      // then adding the cloned contents with the new spanElement into the original selection
-      selection.addRange(selectedTextRange);
-    }
-  }
-}
-
-function createSpanElement(annotationObj) {
+function createSpanElement(annotation) {
   let spanElement = document.createElement("span");
-  spanElement.id = annotationObj.id; // id: string
+  spanElement.id = annotation.id; // id: string
   spanElement.className = "sifter-annotation";
-  spanElement.style.backgroundColor = annotationObj.highlightColor;
+  spanElement.style.backgroundColor = annotation.highlightColor;
   // add comment to spanElement.dataset to grab it for hover-over comment viewing functionality later
-  spanElement.dataset.comment = annotationObj.comment;
+  spanElement.dataset.comment = annotation.comment;
   return spanElement;
 }
 
 /* highlight the selection */
-function highlightSelectedText(annotationObj) {
+function highlightSelectedText(data) {
   // create a new span element with class annotation-highlight and
   // requested color from the context menu
-  let spanElement = createSpanElement(annotationObj);
+  let spanElement = null;
+  try {
+    spanElement = createSpanElement(data);
+  }catch(error){
+    console.error(`creating span element error: ${error}`);
+  }
+  
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   try {
-    addSpanElementToDom(spanElement);
+    if(spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
   } catch (error) {
     console.error(`unable to add span element to DOM: error thrown: ${error}`);
   }
@@ -300,12 +288,9 @@ function highlightSelectedText(annotationObj) {
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
   if (document.getElementById(spanElement.id)) {
-    createAnnotationPopover();
-    annotationObjsForUrl.push(annotationObj); // global value of annotation objs for the url
-    addAnnotationsForUrlIntoPopover();
-    let action = constants.actions.saveAnnotations;
-    let data = annotationObj;
-    contentScriptSendMessage(action, data);
+    createSifterWebPagePopover();
+    addDataForUrlIntoPopover(data);
+    contentScriptSendMessage(constants.actions.saveData, data);
   }
 }
 
@@ -330,13 +315,11 @@ function sifterNextHighlight(event) {
   }, 300);
 }
 
-// TODO: send array/batch of annotation objects to save to chrome storage
 function contentScriptSendMessage(action, data) {
-  if (action === constants.actions.saveAnnotations) {
-    let annotationObjs = data;
+  if (constants.actions.saveData === action) {
     let message = {
-      action: constants.actions.saveAnnotations,
-      data: annotationObjs,
+      action: constants.actions.saveData,
+      data: data,
     };
     chrome.runtime.sendMessage(message, (response) => {
       if (!response) return;
@@ -347,26 +330,8 @@ function contentScriptSendMessage(action, data) {
       );
     });
   }
-
-  // window.atob function decodes the base64 back to the url string
-  // window.btoa function encodes the url string to base64
-  if (constants.actions.fetchAnnotations === action) {
-    let encodedUrlAsKey = data;
-    let message = {
-      action: constants.actions.fetchAnnotations,
-      data: encodedUrlAsKey,
-    };
-    chrome.runtime.sendMessage(message, (response) => {
-      if(response) return response;
-      else
-        console.log(
-          `in contentScript chrome.runtime.sendMessage: response obj: ${JSON.stringify(
-            response
-          )}`
-        );
-    });
-  }
 }
+
 
 // when the DOM content loads, get the active tab url
 // encode the url as a base64 string
@@ -383,19 +348,17 @@ background.js (service worker) and content-script.js
 */
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
+    let data = message.data;
     if (constants.actions.highlightSelectedText === message.action) {
-      if(Object.keys(message.annotationsObjsForUrl) > 0){
-        // TODO: what way to optimize checking how many annotation objects there are?
-        // property lookups later down the call stack have the wrong properties...
-      }
-      let annotationObj = message.annotationObj
-      highlightSelectedText(message.annotationObj);
+      // assign selectedTextRange value to property in data object for storage
+      // to be able to use it to add the annotation data back to the DOM when user
+      // returns to web page
+      let range = getWindowSelectionRange();
+      data.selectedTextRangeData = getSelectionRangeData(range);
+      highlightSelectedText(data);
     }
-    if (constants.actions.addAnnotationsForUrlToDom === message.action) {
-      addAnnotationsForUrlToDom(message.annotationsObjsForUrl);
+    if(constants.actions.addDataForUrlToDom === message.action) {
+      addDataForUrlToDom(data);
     }
-    // if (message.action === constants.actions.fetchAnnotations){
-
-    // }
   });
 });
