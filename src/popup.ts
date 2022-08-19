@@ -7,7 +7,7 @@ in the background.js service worker script, which handles the events on the web 
 This popup.js script handles the events on the Chrome extension popup: popup.html
 */
 
-import { constants } from "./constants.js";
+import { constants } from "./src/constants";
 
 let activeTab = null;
 

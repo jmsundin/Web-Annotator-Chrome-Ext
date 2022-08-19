@@ -71,17 +71,21 @@ function getWindowSelectionRange(){
   if (window.getSelection) {
     let selection = window.getSelection();
     if (selection.rangeCount) {
-      return selection.getRangeAt(0).cloneRange();
+      return selection.getRangeAt(0).cloneRange(); // returns a Range
     }
   }
 }
 
 function getSelectionRangeData(range){
   // TODO: implement getSelectionRangeData
+  
 }
 
 function findSelectionRangeFromStoredData(){
   // TODO: implement findSelectionRangeFromStoredData
+  let selectors = " ";
+  let nodeList = document.querySelectorAll(selectors);
+  let arrayOfNodesFromRange = Array.from(nodeList);
 }
 
 // TODO: add this function into addDataForUrlIntoPopover()
@@ -362,3 +366,5 @@ chrome.runtime.onConnect.addListener((port) => {
     }
   });
 });
+
+export {};

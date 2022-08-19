@@ -2,10 +2,15 @@
   "name": "web-annotator-chrome-ext",
   "version": "1.0.0",
   "description": "Chrome extension to search, annotate web pages, and store annotated chunks.",
-  "main": "./scripts/index.js",
+  "source": "src/index.ts",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "format": "prettier \"./**/*.{js, jsx, json}\" --write",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "parcel build src/index.ts",
+    "test": "jest",
+    "lint": "eslint",
+    "check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -20,9 +25,11 @@
   "homepage": "https://github.com/jmsundin/Web-Annotator-Chrome-Ext#readme",
   "devDependencies": {
     "eslint": "^8.20.0",
+    "parcel": "^2.7.0",
     "prettier": "^2.7.1"
   },
   "dependencies": {
+    "@parcel/config-webextension": "^2.7.0",
     "bootstrap": "^5.2.0",
     "jsdom-quokka-plugin": "^1.0.16",
     "mdb-ui-kit": "^4.3.0",
