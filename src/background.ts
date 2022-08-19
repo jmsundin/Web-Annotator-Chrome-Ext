@@ -13,21 +13,21 @@ import { Color, UserAction, EventContext } from "./constants";
 import { Base64 } from "./base64";
 
 let onUpdatedTabStatus = null;
-const onUpdatedTabState = {
-  unloaded: "unloaded",
-  loading: "loading",
-  complete: "complete",
+enum onUpdatedTabState {
+  unloaded = "unloaded",
+  loading = "loading",
+  complete = "complete",
 };
 
-const annotationObj = {
-  id: null,
-  highlightColor: null,
-  selectionText: null,
-  selectedTextRangeData: null,
-  comment: null,
-  pageUrl: null,
-  urlTitle: null,
-  srcUrl: null,
+interface Annotation {
+  id: number,
+  highlightColor: Color,
+  selectionText: string,
+  selectedTextRangeData: Object,
+  comment: string,
+  pageUrl: string,
+  urlTitle: string,
+  srcUrl: string,
 };
 
 let dataForActiveUrl = {};
