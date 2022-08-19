@@ -2,9 +2,6 @@
   "name": "web-annotator-chrome-ext",
   "version": "1.0.0",
   "description": "Chrome extension to search, annotate web pages, and store annotated chunks.",
-  "source": "./src/popup.ts",
-  "main": "./dist/popup.js",
-  "types": "./dist/popup.d.ts",
   "scripts": {
     "format": "prettier \"./**/*.{js, jsx, json}\" --write",
     "start": "parcel watch src/manifest.json --host localhost",
