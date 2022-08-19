@@ -29,29 +29,13 @@ interface Annotation {
   urlTitle: string,
   srcUrl: string,
 };
-
-let annotationForActiveUrl: Annotation = {};
-let annotationArrayForActiveUrl: Array<Annotation> = [];
+let annotationForActiveUrl: Annotation
+let annotationsForActiveUrl: Array<Annotation> = [];
 
 // setInterval(createObjOfUrlsAndData, 10000);
 
-function createObjOfUrlsAndData() {
-  let tempArray = [];
-  if (dataArray.length > 0) {
-    for (let annotation of dataArray) {
-      while (urls[annotation.pageUrl]) {
-        console.log(urls[annotation.pageUrl]);
-        dataForActiveUrl[annotation.pageUrl] = tempArray.push(annotation);
-        annotationCountsForUrl[annotation.pageUrl]--;
-      }
-      console.log(JSON.stringify(dataForActiveUrl));
-    }
-    return true;
-  } else return false;
-}
-
 // TODO: change this function to getActiveTab? and then return the tab.Tab object?
-function getActiveTabUrl() {
+function getActiveTabUrl(): void{
   let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {
     if (tabs.length > 0) {
@@ -61,30 +45,28 @@ function getActiveTabUrl() {
   });
 }
 
-function getUUID() {
+function getUUID(): string {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
-function saveData(data) {
+function saveData(data: Annotation): void {
   let encodedUrlBase64 = Base64.encode(data.pageUrl);
   let obj = {
     [encodedUrlBase64]: data,
   };
-  chrome.storage.sync.set(obj, (response) => {
-    console.log(`chrome storage sync set response: ${response}`);
-  });
+  chrome.storage.sync.set(obj, () => void {});
 }
 
-function fetchDataForActiveUrl(encodedUrlBase64) {
+function fetchDataForActiveUrl(encodedUrlBase64: string): void {
   // url: string
   // url is stored as a string in the tab object
   chrome.storage.sync.get(encodedUrlBase64, (dataForActiveUrl) => {
     if (Object.keys(dataForActiveUrl).length > 0) {
       for(let prop in dataForActiveUrl){
         let message = {
-          context: constants.context.onUpdatedTabComplete,
-          action: constants.actions.addDataForActiveUrlToDom,
-          data: dataForActiveUrl[prop],
+          context: EventContext.onUpdatedTabComplete,
+          action: UserAction.saveData;
+          data: dataForActiveUrl,
         };
         console.log(`Successfully fetched data: ${JSON.stringify(dataForActiveUrl)}`);
         runPortMessagingConnection(message);
