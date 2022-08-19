@@ -30,9 +30,8 @@ interface Annotation {
   srcUrl: string,
 };
 
-let dataForActiveUrl = {};
-let urls = {}; // hashmap of url with count of annoation objs with that url
-let dataArray = [];
+let annotationForActiveUrl: Annotation = {};
+let annotationArrayForActiveUrl: Array<Annotation> = [];
 
 // setInterval(createObjOfUrlsAndData, 10000);
 
