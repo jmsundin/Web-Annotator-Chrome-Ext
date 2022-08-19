@@ -7,43 +7,36 @@ in the background.js service worker script, which handles the events on the web 
 This popup.js script handles the events on the Chrome extension popup: popup.html
 */
 
-import { constants } from "./src/constants";
+import { Color, EventContext, UserAction } from "./constants";
 
 let activeTab = null;
 
 const searchButton = document.getElementById("search-button");
 const searchInput = document.getElementById("search-input");
 
-function onClickLoadData() {
-  let message = {
-    context: constants.context.onClickLoadDataButtonExtensionPopup,
-    action: constants.actions.fetchData,
-    data: {},
-  };
+interface Message {
+  context: string,
+  action: string,
+  data: Object,
+};
 
-  sendMessagePopupScript(message);
-}
-
-function sendMessagePopupScript(message) {
+function sendMessagePopupScript(message: Message): void {
   chrome.runtime.sendMessage(message, (response) => {
     console.log(`response from messaging system popup script: ${response}`);
   });
 }
 
-// async function getActiveTab() {
-//   const tabs = await chrome.tabs.query({
-//     currentWindow: true,
-//     active: true,
-//   });
-//   activeTab = tabs[0];
-//   return activeTab;
-// }
+function getActiveTab() {
+  const queryOptions = {
+    currentWindow: true, 
+    active: true,
+  }
+  chrome.tabs.query(queryOptions, (tabs) => {
+    activeTab = tabs[0];
+    return activeTab;
+  });
+}
 
-// listener attached to document object waiting for the DOMContentLoadead event
-// TODO: implement the callback
-// document.addEventListener("DOMContentLoaded", async () => {
-//   activeTab = getActiveTab();
-// });
 
 /* basic search with no autocomplete */
 // TODO: implement callback
@@ -135,4 +128,19 @@ function sendMessagePopupScript(message) {
 //       annotationTestComment = "test comment";
 //     }
 //   }
+// });
+
+chrome.browserAction.onClicked.addListener((response: any) => {
+  let message: Message = {
+    context: EventContext.onClickBrowserActionIcon,
+    action: UserAction.fetchData,
+    data: {}
+  };
+  sendMessagePopupScript(message)
+}
+)
+
+// document.addEventListener("DOMContentLoaded", (event) => {
+//   sendMessagePopupScript(message);
+//   activeTab = getActiveTab();
 // });

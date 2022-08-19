@@ -9,8 +9,8 @@ This script listens to and responds to events that happen in the web page and br
 like context menu clicks, tab updates, and extension installation.
 */
 
-import { constants } from "./constants.js";
-import { Base64 } from "./base64.js";
+import { Color, UserAction, EventContext } from "./constants";
+import { Base64 } from "./base64";
 
 let onUpdatedTabStatus = null;
 const onUpdatedTabState = {
@@ -51,6 +51,7 @@ function createObjOfUrlsAndData() {
   } else return false;
 }
 
+// TODO: change this function to getActiveTab? and then return the tab.Tab object?
 function getActiveTabUrl() {
   let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {

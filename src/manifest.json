@@ -10,7 +10,10 @@
     },
     "content_scripts": [
       {
-        "matches": ["http://*/*", "https://*/*", "*://github.com/parcel-bundler/*"],
+        "matches": ["http://*/*", 
+                    "https://*/*", 
+                    "*://github.com/parcel-bundler/*"
+                  ],
         "exclude_matches": [
           "*://*.slack.com/*",
           "*://web.whatsapp.com/*",
@@ -23,7 +26,7 @@
     ],
     "permissions": ["activeTab", "storage", "contextMenus", "tabs", "scripting", "bookmarks"],
     "action": {
-      "default_title": "Sifter-Annotator",
+      "default_title": "Sifter Web Annotator",
       "default_popup": "./popup.html"
     },
     "commands": {

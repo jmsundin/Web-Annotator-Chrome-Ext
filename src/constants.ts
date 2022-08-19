@@ -1,15 +1,22 @@
-export const constants = {
-  highlightColorChoices: ["yellow", "red", "blue", "green", "white", "grey"],
-  context: {
-    onClickLoadDataButtonExtensionPopup:
-      "on-click-load-data-button-extension-popup",
-    onUpdatedTabComplete: "on-updated-tab-complete",
-    onClickContextMenuItem: "on-click-context-menu-item",
-  },
-  actions: {
-    highlightSelectedText: "highlight-selected-text",
-    addDataForActiveUrlToDom: "add-data-for-active-url-to-dom",
-    saveData: "save-data-to-chrome-storage",
-    fetchData: "fetch-data-from-chrome-storage",
-  },
+enum Color {
+       yellow = "yellow",
+       red = "red",
+       blue = "blue",
+       green = "green",
+       white = "white",
+       grey = "grey"
 };
+
+enum EventContext {
+       onUpdatedTabComplete = "on-updated-tab-complete",
+       onClickContextMenuItem = "on-click-context-menu-item",
+       onClickBrowserActionIcon = "on-click-browser-action-icon"
+}
+
+enum UserAction {
+       highlightSelectedText = "highlight-selected-text",
+       saveData = "save-data",
+       fetchData = "fetch-data"
+}
+
+export { Color, EventContext, UserAction }
