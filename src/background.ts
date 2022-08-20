@@ -41,48 +41,64 @@ let annotationsForActiveUrl: Array<Annotation> = [];
 
 // setInterval(createObjOfUrlsAndData, 10000);
 
-// TODO: change this function to getActiveTab? and then return the tab.Tab object?
-function getActiveTabUrl(): void{
+
+function getActiveTab(): chrome.tabs.Tab | undefined {
   let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {
     if (tabs.length > 0) {
       let activeTab = tabs[0];
-      return activeTab.url;
+      return activeTab;
     }
   });
+  return;
 }
 
 function getUUID(): string {
   return Date.now().toString(); // returns time since January 1, 1970 in milliseconds
 }
 
-function saveData(data: Annotation): void {
-  let encodedUrlBase64 = Base64.encode(data.pageUrl);
-  let obj = {
-    [encodedUrlBase64]: data,
+function saveData(annotation: Annotation): Boolean {
+  let encodedUrlBase64 = Base64.encode(annotation.pageUrl);
+  let data = {
+    [encodedUrlBase64]: annotation,
   };
-  chrome.storage.sync.set(obj, () => void {});
+  chrome.storage.sync.set(data, (): Boolean => {
+    return true;
+  });
+  return false;
 }
 
 function fetchDataForActiveUrl(encodedUrlBase64: string): void {
   // url: string
   // url is stored as a string in the tab object
-  chrome.storage.sync.get(encodedUrlBase64, (dataForActiveUrl) => {
-    if (Object.keys(dataForActiveUrl).length > 0) {
-      for(let prop in dataForActiveUrl){
-        let message = {
+  try{
+    chrome.storage.sync.get(encodedUrlBase64, (dataForActiveUrl) => {
+      if (Object.keys(dataForActiveUrl).length > 0) {
+        let annotation: Annotation = {
+          id: dataForActiveUrl.id,
+          highlightColor: dataForActiveUrl.highlightColor,
+          selectionText: dataForActiveUrl.selectionText,
+          selectedTextRangeData: dataForActiveUrl.selectedTextRangeData,
+          comment: dataForActiveUrl.comment,
+          pageUrl: dataForActiveUrl.pageUrl,
+          urlTitle: dataForActiveUrl.urlTitle,
+          srcUrl: dataForActiveUrl.srcUrl,
+        }
+        let message: Message = {
           context: EventContext.onUpdatedTabComplete,
           action: UserAction.saveData,
-          data: dataForActiveUrl,
+          data: annotation,
         };
         console.log(`Successfully fetched data: ${JSON.stringify(dataForActiveUrl)}`);
         runPortMessagingConnection(message);
+      } else {
+        let url = Base64.decode(encodedUrlBase64);
+        throw `No data exist for ${url}`;
       }
-    } else {
-      let url = Base64.decode(encodedUrlBase64);
-      throw `No data exist for ${url}`;
-    }
-  });
+    });
+  }catch(error){
+    throw error;
+  }
 }
 
 // TODO: implement updateAnnotation
@@ -181,6 +197,7 @@ function createContextMenusCallback() {
   );
 }
 
+// TODO
 function runPortMessagingConnection(message: Message) {
   let queryOptions = { lastFocusedWindow: true, active: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`
@@ -214,13 +231,24 @@ chrome.contextMenus.onClicked.addListener(onClickContextMenusCallback);
 chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 
 // listening for messages from chrome extension popup.js or contentScript.js
+// TODO: implement an interface type for message to know what is being received
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (UserAction.saveData === message.action) {
-    saveData(message.data);
+    try{
+      saveData(message.data);
+      sendResponse("saved data in background script to chrome storage");
+    }catch(error){
+      sendResponse(`Save was unsuccessful with this error: ${JSON.stringify(error)}`);
+    };
   }
   if (UserAction.fetchData === message.action) {
     let encodedUrlBase64: string = Base64.encode(message.data.pageUrl);
-    fetchDataForActiveUrl(encodedUrlBase64);
+    try{
+      fetchDataForActiveUrl(encodedUrlBase64);
+    }catch(error){
+      let activeTabUrl = getActiveTab();
+      console.log(`No data to fetch for ${activeTabUrl}. Error message: ${JSON.stringify(error)}`);
+    }
   }
-  sendResponse("saved data in background script to chrome storage");
+  
 });
