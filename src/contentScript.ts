@@ -81,11 +81,10 @@ function addAnnotationForUrlIntoPopover(annotation: Annotation): undefined {
   if (sifterWebPagePopover && annotation) {
     let annotationElement: HTMLElement = document.createElement("div");
     annotationElement.className = "sifter-annotation";
-    if(!annotation.selectionText) return;
+    if (!annotation.selectionText) return;
     annotationElement.innerText = annotation.selectionText;
 
-    let annotationCommentInput: HTMLElement =
-      document.createElement("input");
+    let annotationCommentInput: HTMLElement = document.createElement("input");
     annotationCommentInput.setAttribute("type", "input");
     annotationCommentInput.setAttribute("placeholder", "Add a comment");
 
@@ -228,31 +227,31 @@ function createSifterWebPagePopover() {
 }
 
 function addSpanElementToDom(spanElement: HTMLElement) {
-  if(!currentSelectionRange?.toString()) return;
+  if (!currentSelectionRange?.toString()) return;
   let documentFragment = currentSelectionRange.extractContents();
   spanElement.appendChild(documentFragment);
   currentSelectionRange.insertNode(spanElement);
 }
 
-function addAnnotationForUrlToDom(annotation: Annotation) {
-  let spanElement = null;
-  try {
-    spanElement = createSpanElement(annotation);
-  } catch (error) {
-    console.error(`creating span element error: ${error}`);
-  }
-  try {
-    // if (spanElement) addSpanElementToDom(annotation.selectionParentNode, annotation.selectionChildNode, spanElement);
-  } catch (error) {
-    console.error(`adding span element to DOM error: ${error}`);
-  }
-}
+// function addAnnotationForUrlToDom(annotation: Annotation) {
+//   let spanElement = null;
+//   try {
+//     spanElement = createSpanElement(annotation);
+//   } catch (error) {
+//     console.error(`creating span element error: ${error}`);
+//   }
+//   try {
+//     // if (spanElement) addSpanElementToDom(annotation.selectionParentNode, annotation.selectionChildNode, spanElement);
+//   } catch (error) {
+//     console.error(`adding span element to DOM error: ${error}`);
+//   }
+// }
 
 function createSpanElement(annotation: Annotation): HTMLElement {
   let spanElement: HTMLElement = document.createElement("span");
   spanElement.id = annotation.id; // id: string
   spanElement.className = "sifter-annotation";
-  if (typeof annotation.highlightColor === "string"){
+  if (typeof annotation.highlightColor === "string") {
     spanElement.style.backgroundColor = annotation.highlightColor;
   }
   // add comment to spanElement.dataset to grab it for hover-over comment viewing functionality later
@@ -264,27 +263,26 @@ function createSpanElement(annotation: Annotation): HTMLElement {
 function highlightSelectedText(annotation: Annotation): undefined {
   // create a new span element with class annotation-highlight and
   // requested color from the context menu
-  if(!annotation) return;
+  if (!annotation) return;
   let spanElement: HTMLElement = createSpanElement(annotation);
 
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
-  
-  if (!spanElement)return;
+
+  if (!spanElement) return;
   try {
     addSpanElementToDom(spanElement);
-  }
-  catch(error) {
-    console.log(`unable to add span element to current text selection range. Error thrown: ${error}`);
+  } catch (error) {
+    console.log(
+      `unable to add span element to current text selection range. Error thrown: ${error}`
+    );
   }
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
-  if (spanElement != null) {
-    if (document.getElementById(spanElement.id)) {
-      createSifterWebPagePopover();
-      addAnnotationForUrlIntoPopover(annotation);
-      contentScriptSendMessage(UserAction.saveData, annotation);
-    }
+  if (document.getElementById(spanElement.id)) {
+    createSifterWebPagePopover();
+    addAnnotationForUrlIntoPopover(annotation);
+    contentScriptSendMessage(UserAction.saveData, annotation);
   }
 }
 
@@ -340,6 +338,7 @@ chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
     // console.log(`Inside content script onMessage listener: message: ${JSON.stringify(message)}`);
     let annotation: Annotation = message.data;
+
     if (UserAction.highlightSelectedText === message.action) {
       // assign selectedTextRange value to property in data object for storage
       // to be able to use it to add the annotation data back to the DOM when user
@@ -348,8 +347,9 @@ chrome.runtime.onConnect.addListener((port) => {
       // data.selectedTextRangeData = getSelectionRangeData(range);
       highlightSelectedText(annotation);
     }
-    // if (UserAction.addDataForUrlToDom === message.action) {
-    //   addAnnotationForUrlToDom(data);
-    // }
+    if (UserAction.fetchData === message.action) {
+      createSifterWebPagePopover();
+      addAnnotationForUrlIntoPopover(annotation);
+    }
   });
 });

@@ -35,15 +35,31 @@ enum onUpdatedTabState {
 }
 
 // TODO: add selectionParentNode and selectionChildNode to Annotation interface
-export type Annotation = {
-  id: string;
-  highlightColor: string | number;
-  selectionText: string | undefined;
-  comment: string;
-  pageUrl: string;
-  urlTitle: string | undefined;
-  srcUrl: string | undefined;
-};
+export class Annotation {
+  id?: string;
+  highlightColor?: string | number;
+  selectionText?: string;
+  comment?: string;
+  pageUrl?: string;
+  urlTitle?: string;
+  srcUrl?: string;
+  constructor();
+  constructor(
+    id?: string,
+    highlightColor?: string | number,
+    selectionText?: string,
+    comment?: string,
+    urlTitle?: string,
+    srcUrl?: string
+  ) {
+    this.id = id;
+    this.highlightColor = highlightColor;
+    this.selectionText = selectionText;
+    this.comment = comment;
+    this.urlTitle = urlTitle;
+    this.srcUrl = srcUrl;
+  }
+}
 
 export type Message = {
   context: string;
