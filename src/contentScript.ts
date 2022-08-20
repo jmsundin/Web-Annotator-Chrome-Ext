@@ -14,22 +14,39 @@ enum Color {
   blue = "blue",
   green = "green",
   white = "white",
-  grey = "grey"
-};
+  grey = "grey",
+}
 
 enum EventContext {
   onUpdatedTabComplete = "on-updated-tab-complete",
   onClickContextMenuItem = "on-click-context-menu-item",
-  onClickBrowserActionIcon = "on-click-browser-action-icon"
+  onClickBrowserActionIcon = "on-click-browser-action-icon",
 }
 
 enum UserAction {
   highlightSelectedText = "highlight-selected-text",
   saveData = "save-data",
-  fetchData = "fetch-data"
+  fetchData = "fetch-data",
 }
 
-let sifterWebPagePopover = null;
+interface Message {
+  context: string;
+  action: string;
+  data: Annotation;
+}
+
+interface Annotation {
+  id: number;
+  highlightColor: Color;
+  selectionText: string;
+  selectedTextRangeData: object;
+  comment: string;
+  pageUrl: string;
+  urlTitle: string;
+  srcUrl: string;
+}
+
+let sifterWebPagePopover: Element;
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
@@ -44,7 +61,7 @@ function getChromeExtensionAssets() {
 /* search functions */
 
 // a declared function can be `hoisted` to the top of this file at runtime and thus can be called anywhere in the file
-function searchDOM(searchString) {
+function searchDOM(searchString: string): void {
   for (const div of document.querySelectorAll("div")) {
     console.log(div);
     if (div.textContent.includes(searchString)) {
@@ -53,46 +70,33 @@ function searchDOM(searchString) {
   }
 }
 
-function getActiveTabUrl() {
+function getActiveTab(): chrome.tabs.Tab | undefined {
   let queryOptions = { active: true, currentWindow: true };
   chrome.tabs.query(queryOptions, (tabs) => {
     try {
       let activeTab = tabs[0];
-      return activeTab.url;
-    } catch(error){
+      return activeTab;
+    } catch (error) {
       console.error(`getting active tab url error: ${error}`);
     }
   });
+  return;
 }
 
-function encodeUrlBase64(url) {
-  return window.btoa(url);
-}
-
-function decodeBase64Url(encodedUrlBase64) {
-  return window.atob(encodedUrlBase64);
-}
-
-function getWindowSelectionRange(){
+function getWindowSelectionRange(): Range | undefined {
   if (window.getSelection) {
-    let selection = window.getSelection();
-    if (selection.rangeCount) {
-      return selection.getRangeAt(0).cloneRange(); // returns a Range
+    let selection: Selection | null = window.getSelection();
+    if (selection != null) {
+      return selection.getRangeAt(0).cloneRange();
     }
   }
 }
 
-function getSelectionRangeData(range){
-  // TODO: implement getSelectionRangeData
-  
-}
+// TODO
+function getSelectionParents(range: Range) {}
 
-function findSelectionRangeFromStoredData(){
-  // TODO: implement findSelectionRangeFromStoredData
-  let selectors = " ";
-  let nodeList = document.querySelectorAll(selectors);
-  let arrayOfNodesFromRange = Array.from(nodeList);
-}
+// TODO
+function getSelectionChildren() {}
 
 // TODO: add this function into addDataForUrlIntoPopover()
 function onClickAddComment() {
@@ -101,7 +105,7 @@ function onClickAddComment() {
   commentElement.innerText = textInput;
 }
 
-function addDataForUrlIntoPopover(annotation) {
+function addDataForUrlIntoPopover(annotation: Annotation) {
   if (sifterWebPagePopover && annotation) {
     let annotationElement = document.createElement("div");
     annotationElement.className = "sifter-annotation";
@@ -234,7 +238,9 @@ function createSifterWebPagePopover() {
     close.style.color = "black";
     close.backgroundColor = "#C8CACB";
     close.style.cursor = "pointer";
-    close.addEventListener("click", () => {
+    close.addEventListener(
+      "click",
+      () => {
         sifterWebPagePopover.style.display = "none";
       },
       false
@@ -245,24 +251,23 @@ function createSifterWebPagePopover() {
   }
 }
 
-function addSpanElementToDom(selectedTextRange, spanElement){
-  if(!selectedTextRange) return;
+function addSpanElementToDom(selectedTextRange, spanElement) {
+  if (!selectedTextRange) return;
   let documentFragment = selectedTextRange.extractContents();
   spanElement.appendChild(documentFragment);
   selectedTextRange.insertNode(spanElement);
 }
 
-
 function addDataForUrlToDom(data) {
   let spanElement = null;
   try {
     spanElement = createSpanElement(data);
-  }catch(error) {
+  } catch (error) {
     console.error(`creating span element error: ${error}`);
   }
   try {
     if (spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
-  }catch(error){
+  } catch (error) {
     console.error(`adding span element to DOM error: ${error}`);
   }
 }
@@ -284,13 +289,13 @@ function highlightSelectedText(data) {
   let spanElement = null;
   try {
     spanElement = createSpanElement(data);
-  }catch(error){
+  } catch (error) {
     console.error(`creating span element error: ${error}`);
   }
-  
+
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   try {
-    if(spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
+    if (spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
   } catch (error) {
     console.error(`unable to add span element to DOM: error thrown: ${error}`);
   }
@@ -342,7 +347,6 @@ function contentScriptSendMessage(action, data) {
   }
 }
 
-
 // when the DOM content loads, get the active tab url
 // encode the url as a base64 string
 // that string is the key to fetch any annotations in the page
@@ -350,7 +354,6 @@ function contentScriptSendMessage(action, data) {
 // window.addEventListener("DOMContentLoaded", (event) => {
 //   // What to do when DOM content is loaded?
 // });
-
 
 /* 
 messaging between extension processes in the chrome runtime, not the web page runtime 
@@ -367,7 +370,7 @@ chrome.runtime.onConnect.addListener((port) => {
       data.selectedTextRangeData = getSelectionRangeData(range);
       highlightSelectedText(data);
     }
-    if(constants.actions.addDataForUrlToDom === message.action) {
+    if (constants.actions.addDataForUrlToDom === message.action) {
       addDataForUrlToDom(data);
     }
   });

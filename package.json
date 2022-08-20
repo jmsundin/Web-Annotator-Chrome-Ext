@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Chrome extension to search, annotate web pages, and store annotated chunks.",
   "scripts": {
-    "format": "prettier \"./**/*.{js, jsx, json}\" --write",
+    "format": "prettier \"./**/*.{ts, js, jsx, json}\" --write",
     "start": "parcel watch src/manifest.json --host localhost",
     "build": "parcel build src/manifest.json",
     "test": "jest",

@@ -17,30 +17,29 @@ enum onUpdatedTabState {
   unloaded = "unloaded",
   loading = "loading",
   complete = "complete",
-};
+}
 
 interface Message {
-    context: string,
-    action: string,
-    data: Annotation,
-};
+  context: string;
+  action: string;
+  data: Annotation;
+}
 
 interface Annotation {
-  id: number,
-  highlightColor: Color,
-  selectionText: string,
-  selectedTextRangeData: object,
-  comment: string,
-  pageUrl: string,
-  urlTitle: string,
-  srcUrl: string,
-};
+  id: number;
+  highlightColor: Color;
+  selectionText: string;
+  selectedTextRangeData: object;
+  comment: string;
+  pageUrl: string;
+  urlTitle: string;
+  srcUrl: string;
+}
 
-let annotationForActiveUrl: Annotation
+let annotationForActiveUrl: Annotation;
 let annotationsForActiveUrl: Array<Annotation> = [];
 
 // setInterval(createObjOfUrlsAndData, 10000);
-
 
 function getActiveTab(): chrome.tabs.Tab | undefined {
   let queryOptions = { active: true, currentWindow: true };
@@ -71,7 +70,7 @@ function saveData(annotation: Annotation): Boolean {
 function fetchDataForActiveUrl(encodedUrlBase64: string): void {
   // url: string
   // url is stored as a string in the tab object
-  try{
+  try {
     chrome.storage.sync.get(encodedUrlBase64, (dataForActiveUrl) => {
       if (Object.keys(dataForActiveUrl).length > 0) {
         let annotation: Annotation = {
@@ -83,20 +82,22 @@ function fetchDataForActiveUrl(encodedUrlBase64: string): void {
           pageUrl: dataForActiveUrl.pageUrl,
           urlTitle: dataForActiveUrl.urlTitle,
           srcUrl: dataForActiveUrl.srcUrl,
-        }
+        };
         let message: Message = {
           context: EventContext.onUpdatedTabComplete,
           action: UserAction.saveData,
           data: annotation,
         };
-        console.log(`Successfully fetched data: ${JSON.stringify(dataForActiveUrl)}`);
+        console.log(
+          `Successfully fetched data: ${JSON.stringify(dataForActiveUrl)}`
+        );
         runPortMessagingConnection(message);
       } else {
         let url = Base64.decode(encodedUrlBase64);
         throw `No data exist for ${url}`;
       }
     });
-  }catch(error){
+  } catch (error) {
     throw error;
   }
 }
@@ -111,7 +112,11 @@ function fetchDataForActiveUrl(encodedUrlBase64: string): void {
 //   }
 // }
 
-function onUpdatedTabCallback(tabId: number, changeInfo: any, tab: chrome.tabs.Tab) {
+function onUpdatedTabCallback(
+  tabId: number,
+  changeInfo: any,
+  tab: chrome.tabs.Tab
+) {
   console.log(`changeInfo: ${JSON.stringify(changeInfo)}`);
   if (onUpdatedTabState.unloaded === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.unloaded;
@@ -122,9 +127,9 @@ function onUpdatedTabCallback(tabId: number, changeInfo: any, tab: chrome.tabs.T
   if (onUpdatedTabState.complete === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.complete;
     let encodedUrlBase64 = Base64.encode(tab.url);
-    try{
+    try {
       fetchDataForActiveUrl(encodedUrlBase64);
-    }catch(error){
+    } catch (error) {
       console.error(`${error}`);
     }
   }
@@ -140,12 +145,12 @@ function onClickContextMenusCallback(onClickData, tab) {
     annotationObj.comment = null;
     annotationObj.urlTitle = tab.title;
     annotationObj.pageUrl = onClickData.pageUrl;
-    
+
     let message = {};
     message.context = constants.context.onUpdatedTabComplete;
     message.action = constants.actions.highlightSelectedText;
     message.data = annotationObj;
-    
+
     // if (!(message.annotationObj.pageUrl in urls))
     //   urls[message.annotationObj.pageUrl] = 1;
     // else urls[message.annotationObj.pageUrl]++;
@@ -234,21 +239,26 @@ chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 // TODO: implement an interface type for message to know what is being received
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (UserAction.saveData === message.action) {
-    try{
+    try {
       saveData(message.data);
       sendResponse("saved data in background script to chrome storage");
-    }catch(error){
-      sendResponse(`Save was unsuccessful with this error: ${JSON.stringify(error)}`);
-    };
+    } catch (error) {
+      sendResponse(
+        `Save was unsuccessful with this error: ${JSON.stringify(error)}`
+      );
+    }
   }
   if (UserAction.fetchData === message.action) {
     let encodedUrlBase64: string = Base64.encode(message.data.pageUrl);
-    try{
+    try {
       fetchDataForActiveUrl(encodedUrlBase64);
-    }catch(error){
+    } catch (error) {
       let activeTabUrl = getActiveTab();
-      console.log(`No data to fetch for ${activeTabUrl}. Error message: ${JSON.stringify(error)}`);
+      console.log(
+        `No data to fetch for ${activeTabUrl}. Error message: ${JSON.stringify(
+          error
+        )}`
+      );
     }
   }
-  
 });

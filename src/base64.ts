@@ -2,10 +2,11 @@ interface Base64 {
   characters: string;
   encode: Function;
   decode: Function;
-};
+}
 
 export const Base64: Base64 = {
-  characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+  characters:
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
 
   encode: function (str: string): string {
     var characters = Base64.characters;

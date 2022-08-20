@@ -15,10 +15,10 @@ const searchButton = document.getElementById("search-button");
 const searchInput = document.getElementById("search-input");
 
 interface Message {
-  context: string,
-  action: string,
-  data: Object,
-};
+  context: string;
+  action: string;
+  data: Object;
+}
 
 function sendMessagePopupScript(message: Message): void {
   chrome.runtime.sendMessage(message, (response) => {
@@ -28,15 +28,14 @@ function sendMessagePopupScript(message: Message): void {
 
 function getActiveTab() {
   const queryOptions = {
-    currentWindow: true, 
+    currentWindow: true,
     active: true,
-  }
+  };
   chrome.tabs.query(queryOptions, (tabs) => {
     activeTab = tabs[0];
     return activeTab;
   });
 }
-
 
 /* basic search with no autocomplete */
 // TODO: implement callback
@@ -111,7 +110,7 @@ function getActiveTab() {
 // TODO: implement listener
 // chrome.runtime.onMessage.addListener((message, sender, response) => {
 //   if (message.action === "load-data-from-chrome-storage") {
-    
+
 //   }
 // });
 
@@ -134,11 +133,10 @@ chrome.browserAction.onClicked.addListener((response: any) => {
   let message: Message = {
     context: EventContext.onClickBrowserActionIcon,
     action: UserAction.fetchData,
-    data: {}
+    data: {},
   };
-  sendMessagePopupScript(message)
-}
-)
+  sendMessagePopupScript(message);
+});
 
 // document.addEventListener("DOMContentLoaded", (event) => {
 //   sendMessagePopupScript(message);
