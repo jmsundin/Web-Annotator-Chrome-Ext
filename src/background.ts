@@ -122,14 +122,14 @@ function onClickContextMenusCallback(
   info: chrome.contextMenus.OnClickData,
   tab: chrome.tabs.Tab | undefined
 ): void {
-  if (!info.selectionText && !info.menuItemId) return;
+  if (!info.selectionText && !tab) return;
   let annotation: Annotation = {
     id: getUUID(),
     highlightColor: info.menuItemId,
     selectionText: info.selectionText,
     comment: "",
     pageUrl: info.pageUrl,
-    urlTitle: tab.title,
+    urlTitle: tab?.title,
     srcUrl: info.srcUrl,
   };
 

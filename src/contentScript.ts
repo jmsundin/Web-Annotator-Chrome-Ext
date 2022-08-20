@@ -12,6 +12,7 @@ This script contains any UI that is not the extension popup UI
 import { Annotation, Message, EventContext, UserAction } from "./constants";
 
 let sifterWebPagePopover: HTMLElement;
+let currentSelectionRange: Range | undefined;
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
@@ -67,7 +68,7 @@ function getSelectionChild() {}
 // TODO: add this function into addDataForUrlIntoPopover()
 function onClickAddComment(): undefined {
   let textInput: string;
-  let element: Element | null = document.getElementById("input_text");
+  let element: HTMLElement | null = document.getElementById("input_text");
   let commentElement = document.getElementById("comment_text");
   if (!element) return;
   textInput = element.innerHTML;
@@ -76,13 +77,14 @@ function onClickAddComment(): undefined {
   }
 }
 
-function addAnnotationForUrlIntoPopover(annotation: Annotation) {
+function addAnnotationForUrlIntoPopover(annotation: Annotation): undefined {
   if (sifterWebPagePopover && annotation) {
-    let annotationElement: HTMLDivElement = document.createElement("div");
+    let annotationElement: HTMLElement = document.createElement("div");
     annotationElement.className = "sifter-annotation";
-    annotationElement.innerHTML = annotation.selectionText;
+    if(!annotation.selectionText) return;
+    annotationElement.innerText = annotation.selectionText;
 
-    let annotationCommentInput: HTMLInputElement =
+    let annotationCommentInput: HTMLElement =
       document.createElement("input");
     annotationCommentInput.setAttribute("type", "input");
     annotationCommentInput.setAttribute("placeholder", "Add a comment");
@@ -90,16 +92,16 @@ function addAnnotationForUrlIntoPopover(annotation: Annotation) {
     sifterWebPagePopover.appendChild(annotationElement);
     sifterWebPagePopover.appendChild(annotationCommentInput);
 
-    let commentInput: HTMLInputElement = document.createElement("input");
+    let commentInput: HTMLElement = document.createElement("input");
     commentInput.setAttribute("id", "input_text");
     commentInput.setAttribute("type", "text");
     commentInput.setAttribute("placeholder", "Add a comment");
 
-    let commentSubmit: HTMLButtonElement = document.createElement("button");
+    let commentSubmit: HTMLElement = document.createElement("button");
     commentSubmit.setAttribute("onclick", "onClickAddComment()");
     commentSubmit.innerHTML = "Add";
 
-    let commentElement: HTMLParagraphElement = document.createElement("p");
+    let commentElement: HTMLElement = document.createElement("p");
     commentElement.setAttribute("id", "comment_text");
 
     document.body.appendChild(commentInput);
@@ -225,17 +227,11 @@ function createSifterWebPagePopover() {
   }
 }
 
-// TODO: implement?
-function addSpanElementToDom(
-  selectionParentNode: object,
-  selectionChildNode: object,
-  spanElement: HTMLElement
-) {
-  if (!selectionParentNode) return;
-  // let parentNode: Node;
-  // let documentFragment = parentNode.extractContents();
-  // spanElement.appendChild(documentFragment);
-  // selectedTextRange.insertNode(spanElement);
+function addSpanElementToDom(spanElement: HTMLElement) {
+  if(!currentSelectionRange?.toString()) return;
+  let documentFragment = currentSelectionRange.extractContents();
+  spanElement.appendChild(documentFragment);
+  currentSelectionRange.insertNode(spanElement);
 }
 
 function addAnnotationForUrlToDom(annotation: Annotation) {
@@ -252,39 +248,33 @@ function addAnnotationForUrlToDom(annotation: Annotation) {
   }
 }
 
-function createSpanElement(annotation: Annotation) {
+function createSpanElement(annotation: Annotation): HTMLElement {
   let spanElement: HTMLElement = document.createElement("span");
   spanElement.id = annotation.id; // id: string
   spanElement.className = "sifter-annotation";
-  spanElement.style.backgroundColor = annotation.highlightColor;
+  if (typeof annotation.highlightColor === "string"){
+    spanElement.style.backgroundColor = annotation.highlightColor;
+  }
   // add comment to spanElement.dataset to grab it for hover-over comment viewing functionality later
   spanElement.dataset.comment = annotation.comment;
   return spanElement;
 }
 
 /* highlight the selection */
-function highlightSelectedText(annotation: Annotation): undefined | void {
+function highlightSelectedText(annotation: Annotation): undefined {
   // create a new span element with class annotation-highlight and
   // requested color from the context menu
-  let spanElement: HTMLElement | null = null;
-  try {
-    if (spanElement != null) {
-      spanElement = createSpanElement(annotation);
-    }
-  } catch (error) {
-    console.log(
-      `attempting to create span element produced this error: ${error}`
-    );
-  }
+  if(!annotation) return;
+  let spanElement: HTMLElement = createSpanElement(annotation);
 
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
+  
+  if (!spanElement)return;
   try {
-    if (spanElement != null) {
-      // TODO: implement addSpanElementToDom()
-      // addSpanElementToDom(data.selectedTextRange, spanElement);
-    }
-  } catch (error) {
-    console.error(`unable to add span element to DOM: error thrown: ${error}`);
+    addSpanElementToDom(spanElement);
+  }
+  catch(error) {
+    console.log(`unable to add span element to current text selection range. Error thrown: ${error}`);
   }
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
@@ -348,12 +338,13 @@ background.js (service worker) and content-script.js
 */
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
+    // console.log(`Inside content script onMessage listener: message: ${JSON.stringify(message)}`);
     let annotation: Annotation = message.data;
     if (UserAction.highlightSelectedText === message.action) {
       // assign selectedTextRange value to property in data object for storage
       // to be able to use it to add the annotation data back to the DOM when user
       // returns to web page
-      // let range = getWindowSelectionRange();
+      currentSelectionRange = getWindowSelectionRange();
       // data.selectedTextRangeData = getSelectionRangeData(range);
       highlightSelectedText(annotation);
     }
