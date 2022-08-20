@@ -36,17 +36,18 @@ interface Message {
 }
 
 interface Annotation {
-  id: number;
+  id: string;
   highlightColor: Color;
   selectionText: string;
-  selectedTextRangeData: object;
+  selectionParentNodes: object;
+  selectionChildNodes: object,
   comment: string;
   pageUrl: string;
   urlTitle: string;
   srcUrl: string;
 }
 
-let sifterWebPagePopover: Element;
+let sifterWebPagePopover: HTMLElement;
 
 // div text content on the web page that matches search input
 let textChunksWithSearchString = [];
@@ -64,7 +65,8 @@ function getChromeExtensionAssets() {
 function searchDOM(searchString: string): void {
   for (const div of document.querySelectorAll("div")) {
     console.log(div);
-    if (div.textContent.includes(searchString)) {
+    if (div.innerHTML.includes(searchString)) {
+      // TODO
     }
     textChunksWithSearchString.push(div.innerHTML);
   }
@@ -99,35 +101,40 @@ function getSelectionParents(range: Range) {}
 function getSelectionChildren() {}
 
 // TODO: add this function into addDataForUrlIntoPopover()
-function onClickAddComment() {
-  let textInput = document.getElementById("input_text").value;
+function onClickAddComment(): undefined {
+  let textInput: string;
+  let element: Element | null = document.getElementById("input_text");
   let commentElement = document.getElementById("comment_text");
-  commentElement.innerText = textInput;
+  if(!element) return;
+  textInput = element.innerHTML;
+  if(textInput && commentElement != null){
+    commentElement.innerHTML = textInput;
+  }
 }
 
-function addDataForUrlIntoPopover(annotation: Annotation) {
+function addAnnotationForUrlIntoPopover(annotation: Annotation) {
   if (sifterWebPagePopover && annotation) {
-    let annotationElement = document.createElement("div");
+    let annotationElement: HTMLDivElement = document.createElement("div");
     annotationElement.className = "sifter-annotation";
     annotationElement.innerHTML = annotation.selectionText;
 
-    let annotationCommentInput = document.createElement("input");
+    let annotationCommentInput: HTMLInputElement = document.createElement("input");
     annotationCommentInput.setAttribute("type", "input");
     annotationCommentInput.setAttribute("placeholder", "Add a comment");
 
     sifterWebPagePopover.appendChild(annotationElement);
     sifterWebPagePopover.appendChild(annotationCommentInput);
 
-    let commentInput = document.createElement("input");
+    let commentInput: HTMLInputElement = document.createElement("input");
     commentInput.setAttribute("id", "input_text");
     commentInput.setAttribute("type", "text");
     commentInput.setAttribute("placeholder", "Add a comment");
 
-    let commentSubmit = document.createElement("button");
+    let commentSubmit: HTMLButtonElement = document.createElement("button");
     commentSubmit.setAttribute("onclick", "onClickAddComment()");
     commentSubmit.innerHTML = "Add";
 
-    let commentElement = document.createElement("p");
+    let commentElement: HTMLParagraphElement = document.createElement("p");
     commentElement.setAttribute("id", "comment_text");
 
     document.body.appendChild(commentInput);
@@ -136,24 +143,26 @@ function addDataForUrlIntoPopover(annotation: Annotation) {
   }
 }
 
-function dragElement(div) {
-  let draggedDiv = div;
+function dragElement(sifterWebPagePopover: HTMLElement) {
+  let draggedDiv = sifterWebPagePopover;
   let left = 0;
   let top = 0;
-  draggedDiv
-    .querySelector("#dragheader")
-    .addEventListener("mousedown", dragMouseDown);
+  
+  let dragHeader: HTMLElement | null = draggedDiv.querySelector("#dragheader");
+  if(dragHeader != null){
+    dragHeader.addEventListener("mousedown", dragMouseDown);
+  }
 
-  function dragMouseDown(event) {
+  function dragMouseDown(event: MouseEvent) {
     event.preventDefault();
-    let rect = draggedDiv.getBoundingClientRect();
+    let rect: DOMRect = draggedDiv.getBoundingClientRect();
     left = event.clientX - rect.left;
     top = event.clientY - rect.top;
     document.addEventListener("mouseup", closeDragElement);
     document.addEventListener("mousemove", elementDrag);
   }
 
-  function elementDrag(event) {
+  function elementDrag(event: MouseEvent) {
     event.preventDefault();
     let x = event.clientX;
     let y = event.clientY;
@@ -172,7 +181,7 @@ function dragElement(div) {
     draggedDiv.style.left = newleft + "px";
     draggedDiv.style.top = newtop + "px";
   }
-  function closeDragElement(event) {
+  function closeDragElement(event: MouseEvent) {
     document.removeEventListener("mouseup", closeDragElement);
     document.removeEventListener("mousemove", elementDrag);
   }
@@ -190,7 +199,7 @@ function createSifterWebPagePopover() {
     sifterWebPagePopover.style.userSelect = "none";
     sifterWebPagePopover.style.display = "block";
     sifterWebPagePopover.style.position = "fixed";
-    sifterWebPagePopover.style.zIndex = 200000;
+    sifterWebPagePopover.style.zIndex = "200000";
     sifterWebPagePopover.style.margin = "0px";
     sifterWebPagePopover.style.userSelect = "none";
     sifterWebPagePopover.style.fontFamily = '"avenir next",Helvetica';
@@ -217,9 +226,9 @@ function createSifterWebPagePopover() {
     dragheaderPopover.textContent = "Sifter Annotator";
     sifterWebPagePopover.appendChild(dragheaderPopover);
     var sifterPopoverCaption = document.createElement("div");
-    sifterPopoverCaption.addEventListener("mousedown", (event) =>
-      sifterNextHighlight(event)
-    );
+    sifterPopoverCaption.addEventListener("mousedown", (event: MouseEvent) => {
+      // sifterNextHighlight(event);
+    });
     sifterPopoverCaption.title = "Click to navigate in highlights";
     sifterPopoverCaption.id = "sifterPopoverCaption";
     sifterPopoverCaption.style.cursor = "pointer";
@@ -227,20 +236,18 @@ function createSifterWebPagePopover() {
     sifterPopoverCaption.textContent = "";
     sifterWebPagePopover.appendChild(sifterPopoverCaption);
 
-    let close = document.createElement("div");
+    let close: HTMLElement = document.createElement("div");
     close.textContent = "✕";
     close.style.position = "absolute";
-    close.style.top = 0;
-    close.style.left = 0;
+    close.style.top = "0";
+    close.style.left = "0";
     close.style.margin = "4px";
     close.style.fontSize = "12px";
     close.style.padding = "4px";
     close.style.color = "black";
-    close.backgroundColor = "#C8CACB";
+    close.style.backgroundColor = "#C8CACB";
     close.style.cursor = "pointer";
-    close.addEventListener(
-      "click",
-      () => {
+    close.addEventListener( "click", (): void => {
         sifterWebPagePopover.style.display = "none";
       },
       false
@@ -251,29 +258,31 @@ function createSifterWebPagePopover() {
   }
 }
 
-function addSpanElementToDom(selectedTextRange, spanElement) {
-  if (!selectedTextRange) return;
-  let documentFragment = selectedTextRange.extractContents();
-  spanElement.appendChild(documentFragment);
-  selectedTextRange.insertNode(spanElement);
+// TODO: implement?
+function addSpanElementToDom(selectionParentNodes: object, selectionChildNodes: object, spanElement: HTMLElement) {
+  if (!selectionParentNodes) return;
+  // let parentNode: Node;
+  // let documentFragment = parentNode.extractContents();
+  // spanElement.appendChild(documentFragment);
+  // selectedTextRange.insertNode(spanElement);
 }
 
-function addDataForUrlToDom(data) {
+function addAnnotationForUrlToDom(annotation: Annotation) {
   let spanElement = null;
   try {
-    spanElement = createSpanElement(data);
+    spanElement = createSpanElement(annotation);
   } catch (error) {
     console.error(`creating span element error: ${error}`);
   }
   try {
-    if (spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
+    if (spanElement) addSpanElementToDom(annotation.selectionParentNodes, annotation.selectionChildNodes, spanElement);
   } catch (error) {
     console.error(`adding span element to DOM error: ${error}`);
   }
 }
 
-function createSpanElement(annotation) {
-  let spanElement = document.createElement("span");
+function createSpanElement(annotation: Annotation) {
+  let spanElement: HTMLElement = document.createElement("span");
   spanElement.id = annotation.id; // id: string
   spanElement.className = "sifter-annotation";
   spanElement.style.backgroundColor = annotation.highlightColor;
@@ -283,58 +292,67 @@ function createSpanElement(annotation) {
 }
 
 /* highlight the selection */
-function highlightSelectedText(data) {
+function highlightSelectedText(annotation: Annotation): undefined | void {
   // create a new span element with class annotation-highlight and
   // requested color from the context menu
-  let spanElement = null;
+  let spanElement: HTMLElement | null = null;
   try {
-    spanElement = createSpanElement(data);
+    if (spanElement != null){
+      spanElement = createSpanElement(annotation);
+    }
   } catch (error) {
-    console.error(`creating span element error: ${error}`);
+    console.log(`attempting to create span element produced this error: ${error}`);
   }
 
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   try {
-    if (spanElement) addSpanElementToDom(data.selectedTextRange, spanElement);
+    if (spanElement != null){
+      // TODO: implement addSpanElementToDom()
+      // addSpanElementToDom(data.selectedTextRange, spanElement);
+    }
   } catch (error) {
     console.error(`unable to add span element to DOM: error thrown: ${error}`);
   }
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
-  if (document.getElementById(spanElement.id)) {
-    createSifterWebPagePopover();
-    addDataForUrlIntoPopover(data);
-    contentScriptSendMessage(constants.actions.saveData, data);
+  if(spanElement != null){
+    if (document.getElementById(spanElement.id)) {
+      createSifterWebPagePopover();
+      addAnnotationForUrlIntoPopover(annotation);
+      contentScriptSendMessage(UserAction.saveData, annotation);
+    }
   }
+  
 }
 
-function sifterNextHighlight(event) {
+function sifterNextHighlight(event: MouseEvent) {
   // prevent text selection
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
 
-  let highlights = document.getElementsByClassName("annotation-highlight");
+  let highlights: HTMLCollectionOf<Element> = document.getElementsByClassName("annotation-highlight");
   if (highlights.length == 0) return;
-  currentHighlight = currentHighlight % highlights.length;
+  // TODO: create global or pass in current spanElement to this function above
+  // spanElement = currentHighlight % highlights.length;
   // updateAnnotationPopoverCaption();
-  let h = highlights[currentHighlight];
-  h.style.transition = "opacity 0.3s ease-in-out";
-  h.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
-  h.style.opacity = 0.2;
-  currentHighlight += 1;
-  setTimeout(() => {
-    h.style.opacity = 1.0;
-  }, 300);
+  // let h = highlights[currentHighlight];
+  // h.style.transition = "opacity 0.3s ease-in-out";
+  // h.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+  // h.style.opacity = 0.2;
+  // currentHighlight += 1;
+  // setTimeout(() => {
+  //   h.style.opacity = 1.0;
+  // }, 300);
 }
 
-function contentScriptSendMessage(action, data) {
-  if (constants.actions.saveData === action) {
+function contentScriptSendMessage(action: UserAction, annotation: Annotation): void {
+  if (UserAction.saveData === action) {
     let message = {
-      action: constants.actions.saveData,
-      data: data,
+      action: UserAction.saveData,
+      data: annotation,
     };
     chrome.runtime.sendMessage(message, (response) => {
       if (!response) return;
@@ -347,32 +365,24 @@ function contentScriptSendMessage(action, data) {
   }
 }
 
-// when the DOM content loads, get the active tab url
-// encode the url as a base64 string
-// that string is the key to fetch any annotations in the page
-// stored in chrome storage or later the cloud
-// window.addEventListener("DOMContentLoaded", (event) => {
-//   // What to do when DOM content is loaded?
-// });
-
 /* 
 messaging between extension processes in the chrome runtime, not the web page runtime 
 background.js (service worker) and content-script.js
 */
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((message) => {
-    let data = message.data;
-    if (constants.actions.highlightSelectedText === message.action) {
+    let annotation: Annotation = message.data;
+    if (UserAction.highlightSelectedText === message.action) {
       // assign selectedTextRange value to property in data object for storage
       // to be able to use it to add the annotation data back to the DOM when user
       // returns to web page
-      let range = getWindowSelectionRange();
-      data.selectedTextRangeData = getSelectionRangeData(range);
-      highlightSelectedText(data);
+      // let range = getWindowSelectionRange();
+      // data.selectedTextRangeData = getSelectionRangeData(range);
+      highlightSelectedText(annotation);
     }
-    if (constants.actions.addDataForUrlToDom === message.action) {
-      addDataForUrlToDom(data);
-    }
+    // if (UserAction.addDataForUrlToDom === message.action) {
+    //   addAnnotationForUrlToDom(data);
+    // }
   });
 });
 
