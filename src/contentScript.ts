@@ -8,44 +8,8 @@ This script contains any UI that is not the extension popup UI
 */
 
 /* global variable declarations and assignments */
-enum Color {
-  yellow = "yellow",
-  red = "red",
-  blue = "blue",
-  green = "green",
-  white = "white",
-  grey = "grey",
-}
 
-enum EventContext {
-  onUpdatedTabComplete = "on-updated-tab-complete",
-  onClickContextMenuItem = "on-click-context-menu-item",
-  onClickBrowserActionIcon = "on-click-browser-action-icon",
-}
-
-enum UserAction {
-  highlightSelectedText = "highlight-selected-text",
-  saveData = "save-data",
-  fetchData = "fetch-data",
-}
-
-interface Message {
-  context: string;
-  action: string;
-  data: Annotation;
-}
-
-interface Annotation {
-  id: string;
-  highlightColor: Color;
-  selectionText: string;
-  selectionParentNodes: object;
-  selectionChildNodes: object,
-  comment: string;
-  pageUrl: string;
-  urlTitle: string;
-  srcUrl: string;
-}
+import { Annotation, Message, EventContext, UserAction } from "./constants";
 
 let sifterWebPagePopover: HTMLElement;
 
@@ -95,19 +59,19 @@ function getWindowSelectionRange(): Range | undefined {
 }
 
 // TODO
-function getSelectionParents(range: Range) {}
+function getSelectionParent(range: Range) {}
 
 // TODO
-function getSelectionChildren() {}
+function getSelectionChild() {}
 
 // TODO: add this function into addDataForUrlIntoPopover()
 function onClickAddComment(): undefined {
   let textInput: string;
   let element: Element | null = document.getElementById("input_text");
   let commentElement = document.getElementById("comment_text");
-  if(!element) return;
+  if (!element) return;
   textInput = element.innerHTML;
-  if(textInput && commentElement != null){
+  if (textInput && commentElement != null) {
     commentElement.innerHTML = textInput;
   }
 }
@@ -118,7 +82,8 @@ function addAnnotationForUrlIntoPopover(annotation: Annotation) {
     annotationElement.className = "sifter-annotation";
     annotationElement.innerHTML = annotation.selectionText;
 
-    let annotationCommentInput: HTMLInputElement = document.createElement("input");
+    let annotationCommentInput: HTMLInputElement =
+      document.createElement("input");
     annotationCommentInput.setAttribute("type", "input");
     annotationCommentInput.setAttribute("placeholder", "Add a comment");
 
@@ -147,9 +112,9 @@ function dragElement(sifterWebPagePopover: HTMLElement) {
   let draggedDiv = sifterWebPagePopover;
   let left = 0;
   let top = 0;
-  
+
   let dragHeader: HTMLElement | null = draggedDiv.querySelector("#dragheader");
-  if(dragHeader != null){
+  if (dragHeader != null) {
     dragHeader.addEventListener("mousedown", dragMouseDown);
   }
 
@@ -247,7 +212,9 @@ function createSifterWebPagePopover() {
     close.style.color = "black";
     close.style.backgroundColor = "#C8CACB";
     close.style.cursor = "pointer";
-    close.addEventListener( "click", (): void => {
+    close.addEventListener(
+      "click",
+      (): void => {
         sifterWebPagePopover.style.display = "none";
       },
       false
@@ -259,8 +226,12 @@ function createSifterWebPagePopover() {
 }
 
 // TODO: implement?
-function addSpanElementToDom(selectionParentNodes: object, selectionChildNodes: object, spanElement: HTMLElement) {
-  if (!selectionParentNodes) return;
+function addSpanElementToDom(
+  selectionParentNode: object,
+  selectionChildNode: object,
+  spanElement: HTMLElement
+) {
+  if (!selectionParentNode) return;
   // let parentNode: Node;
   // let documentFragment = parentNode.extractContents();
   // spanElement.appendChild(documentFragment);
@@ -275,7 +246,7 @@ function addAnnotationForUrlToDom(annotation: Annotation) {
     console.error(`creating span element error: ${error}`);
   }
   try {
-    if (spanElement) addSpanElementToDom(annotation.selectionParentNodes, annotation.selectionChildNodes, spanElement);
+    // if (spanElement) addSpanElementToDom(annotation.selectionParentNode, annotation.selectionChildNode, spanElement);
   } catch (error) {
     console.error(`adding span element to DOM error: ${error}`);
   }
@@ -297,16 +268,18 @@ function highlightSelectedText(annotation: Annotation): undefined | void {
   // requested color from the context menu
   let spanElement: HTMLElement | null = null;
   try {
-    if (spanElement != null){
+    if (spanElement != null) {
       spanElement = createSpanElement(annotation);
     }
   } catch (error) {
-    console.log(`attempting to create span element produced this error: ${error}`);
+    console.log(
+      `attempting to create span element produced this error: ${error}`
+    );
   }
 
   // console.log(`inside highlightSelectedText spanElement: ${spanElement.toString()}`);
   try {
-    if (spanElement != null){
+    if (spanElement != null) {
       // TODO: implement addSpanElementToDom()
       // addSpanElementToDom(data.selectedTextRange, spanElement);
     }
@@ -316,14 +289,13 @@ function highlightSelectedText(annotation: Annotation): undefined | void {
 
   // check if new spanElement was successfully added to DOM using the UUID of the element
   // if successful, sync new annotation to storage
-  if(spanElement != null){
+  if (spanElement != null) {
     if (document.getElementById(spanElement.id)) {
       createSifterWebPagePopover();
       addAnnotationForUrlIntoPopover(annotation);
       contentScriptSendMessage(UserAction.saveData, annotation);
     }
   }
-  
 }
 
 function sifterNextHighlight(event: MouseEvent) {
@@ -333,7 +305,9 @@ function sifterNextHighlight(event: MouseEvent) {
     event.stopPropagation();
   }
 
-  let highlights: HTMLCollectionOf<Element> = document.getElementsByClassName("annotation-highlight");
+  let highlights: HTMLCollectionOf<Element> = document.getElementsByClassName(
+    "annotation-highlight"
+  );
   if (highlights.length == 0) return;
   // TODO: create global or pass in current spanElement to this function above
   // spanElement = currentHighlight % highlights.length;
@@ -348,7 +322,10 @@ function sifterNextHighlight(event: MouseEvent) {
   // }, 300);
 }
 
-function contentScriptSendMessage(action: UserAction, annotation: Annotation): void {
+function contentScriptSendMessage(
+  action: UserAction,
+  annotation: Annotation
+): void {
   if (UserAction.saveData === action) {
     let message = {
       action: UserAction.saveData,
@@ -385,5 +362,3 @@ chrome.runtime.onConnect.addListener((port) => {
     // }
   });
 });
-
-export {};

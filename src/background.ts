@@ -9,32 +9,17 @@ This script listens to and responds to events that happen in the web page and br
 like context menu clicks, tab updates, and extension installation.
 */
 
-import { Color, UserAction, EventContext } from "./constants";
+import {
+  color,
+  Annotation,
+  Message,
+  UserAction,
+  EventContext,
+  onUpdatedTabState,
+} from "./constants";
 import { Base64 } from "./base64";
 
 let onUpdatedTabStatus = null;
-enum onUpdatedTabState {
-  unloaded = "unloaded",
-  loading = "loading",
-  complete = "complete",
-}
-
-interface Message {
-  context: string;
-  action: string;
-  data: Annotation;
-}
-
-interface Annotation {
-  id: number;
-  highlightColor: Color;
-  selectionText: string;
-  selectedTextRangeData: object;
-  comment: string;
-  pageUrl: string;
-  urlTitle: string;
-  srcUrl: string;
-}
 
 let annotationForActiveUrl: Annotation;
 let annotationsForActiveUrl: Array<Annotation> = [];
@@ -77,7 +62,6 @@ function fetchDataForActiveUrl(encodedUrlBase64: string): void {
           id: dataForActiveUrl.id,
           highlightColor: dataForActiveUrl.highlightColor,
           selectionText: dataForActiveUrl.selectionText,
-          selectedTextRangeData: dataForActiveUrl.selectedTextRangeData,
           comment: dataForActiveUrl.comment,
           pageUrl: dataForActiveUrl.pageUrl,
           urlTitle: dataForActiveUrl.urlTitle,
@@ -117,7 +101,6 @@ function onUpdatedTabCallback(
   changeInfo: any,
   tab: chrome.tabs.Tab
 ) {
-  console.log(`changeInfo: ${JSON.stringify(changeInfo)}`);
   if (onUpdatedTabState.unloaded === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.unloaded;
   }
@@ -135,32 +118,36 @@ function onUpdatedTabCallback(
   }
 }
 
-function onClickContextMenusCallback(onClickData, tab) {
-  if (constants.highlightColorChoices.includes(onClickData.menuItemId)) {
-    annotationObj.id = getUUID();
-    annotationObj.highlightColor = onClickData.menuItemId;
-    annotationObj.selectionText = onClickData.selectionText;
-    annotationObj.selectedTextRange = null;
-    // annotationObj.srcUrl = onClickData.srcUrl;
-    annotationObj.comment = null;
-    annotationObj.urlTitle = tab.title;
-    annotationObj.pageUrl = onClickData.pageUrl;
+function onClickContextMenusCallback(
+  info: chrome.contextMenus.OnClickData,
+  tab: chrome.tabs.Tab | undefined
+): void {
+  if (!info.selectionText && !info.menuItemId) return;
+  let annotation: Annotation = {
+    id: getUUID(),
+    highlightColor: info.menuItemId,
+    selectionText: info.selectionText,
+    comment: "",
+    pageUrl: info.pageUrl,
+    urlTitle: tab.title,
+    srcUrl: info.srcUrl,
+  };
 
-    let message = {};
-    message.context = constants.context.onUpdatedTabComplete;
-    message.action = constants.actions.highlightSelectedText;
-    message.data = annotationObj;
+  let message: Message = {
+    context: EventContext.onClickContextMenuItem,
+    action: UserAction.highlightSelectedText,
+    data: annotation,
+  };
 
-    // if (!(message.annotationObj.pageUrl in urls))
-    //   urls[message.annotationObj.pageUrl] = 1;
-    // else urls[message.annotationObj.pageUrl]++;
+  // if (!(message.annotationObj.pageUrl in urls))
+  //   urls[message.annotationObj.pageUrl] = 1;
+  // else urls[message.annotationObj.pageUrl]++;
 
-    // dataArray.push(message.annotationObj);
-    // console.log(`urls: ${JSON.stringify(urls)}
-    //             annotationArray: ${JSON.stringify(dataArray)}`);
+  // dataArray.push(message.annotationObj);
+  // console.log(`urls: ${JSON.stringify(urls)}
+  //             annotationArray: ${JSON.stringify(dataArray)}`);
 
-    runPortMessagingConnection(message);
-  }
+  runPortMessagingConnection(message);
 }
 
 function contextMenusCreateCallback() {
@@ -173,7 +160,7 @@ function createContextMenusCallback() {
   // these menu items will only show in the context menu with the context of selection of text
   chrome.contextMenus.create(
     {
-      id: "yellow",
+      id: color.yellow,
       title: "yellow",
       type: "normal",
       contexts: ["selection"],
@@ -183,7 +170,7 @@ function createContextMenusCallback() {
 
   chrome.contextMenus.create(
     {
-      id: "red",
+      id: color.red,
       title: "red",
       type: "normal",
       contexts: ["selection"],
@@ -193,8 +180,35 @@ function createContextMenusCallback() {
 
   chrome.contextMenus.create(
     {
-      id: "grey",
+      id: color.grey,
       title: "grey",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
+  );
+  chrome.contextMenus.create(
+    {
+      id: color.white,
+      title: "white",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
+  );
+  chrome.contextMenus.create(
+    {
+      id: color.blue,
+      title: "blue",
+      type: "normal",
+      contexts: ["selection"],
+    },
+    contextMenusCreateCallback
+  );
+  chrome.contextMenus.create(
+    {
+      id: color.green,
+      title: "green",
       type: "normal",
       contexts: ["selection"],
     },
@@ -210,11 +224,12 @@ function runPortMessagingConnection(message: Message) {
   chrome.tabs.query(queryOptions, (tabs) => {
     if (tabs.length > 0) {
       let tab = tabs[0];
+      if(!tab.id) return;
       const port = chrome.tabs.connect(tab.id);
       port.postMessage(message);
-      port.onDisconnect = (err) => {
-        console.error("disconnected with this error: ", err);
-      };
+      port.onDisconnect.addListener((error): void => {
+        console.error("disconnected with this error: ", error);
+      });
     }
   });
 }
