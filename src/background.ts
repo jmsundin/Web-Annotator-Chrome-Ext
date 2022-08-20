@@ -19,16 +19,23 @@ enum onUpdatedTabState {
   complete = "complete",
 };
 
+interface Message {
+    context: string,
+    action: string,
+    data: Annotation,
+};
+
 interface Annotation {
   id: number,
   highlightColor: Color,
   selectionText: string,
-  selectedTextRangeData: Object,
+  selectedTextRangeData: object,
   comment: string,
   pageUrl: string,
   urlTitle: string,
   srcUrl: string,
 };
+
 let annotationForActiveUrl: Annotation
 let annotationsForActiveUrl: Array<Annotation> = [];
 
@@ -65,7 +72,7 @@ function fetchDataForActiveUrl(encodedUrlBase64: string): void {
       for(let prop in dataForActiveUrl){
         let message = {
           context: EventContext.onUpdatedTabComplete,
-          action: UserAction.saveData;
+          action: UserAction.saveData,
           data: dataForActiveUrl,
         };
         console.log(`Successfully fetched data: ${JSON.stringify(dataForActiveUrl)}`);
@@ -88,17 +95,15 @@ function fetchDataForActiveUrl(encodedUrlBase64: string): void {
 //   }
 // }
 
-function onUpdatedTabCallback(tabId, changeInfo, tab) {
-  if (onUpdatedTabState.unloaded == changeInfo.status) {
+function onUpdatedTabCallback(tabId: number, changeInfo: any, tab: chrome.tabs.Tab) {
+  console.log(`changeInfo: ${JSON.stringify(changeInfo)}`);
+  if (onUpdatedTabState.unloaded === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.unloaded;
   }
-
-  if (onUpdatedTabState.loading == changeInfo.status) {
+  if (onUpdatedTabState.loading === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.loading;
   }
-
-  
-  if (onUpdatedTabState.complete == changeInfo.status) {
+  if (onUpdatedTabState.complete === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.complete;
     let encodedUrlBase64 = Base64.encode(tab.url);
     try{
@@ -176,7 +181,7 @@ function createContextMenusCallback() {
   );
 }
 
-function runPortMessagingConnection(message) {
+function runPortMessagingConnection(message: Message) {
   let queryOptions = { lastFocusedWindow: true, active: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`
   // chrome.tabs.query returns a Promise object
@@ -210,11 +215,11 @@ chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 
 // listening for messages from chrome extension popup.js or contentScript.js
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (constants.actions.saveData === message.action) {
+  if (UserAction.saveData === message.action) {
     saveData(message.data);
   }
-  if (constants.actions.fetchData === message.action) {
-    let encodedUrlBase64 = Base64.encode(message.data.pageUrl);
+  if (UserAction.fetchData === message.action) {
+    let encodedUrlBase64: string = Base64.encode(message.data.pageUrl);
     fetchDataForActiveUrl(encodedUrlBase64);
   }
   sendResponse("saved data in background script to chrome storage");

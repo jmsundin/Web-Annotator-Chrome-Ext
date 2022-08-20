@@ -1,8 +1,13 @@
-export const Base64 = {
-  characters:
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+interface Base64 {
+  characters: string;
+  encode: Function;
+  decode: Function;
+};
 
-  encode: function (str) {
+export const Base64: Base64 = {
+  characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+  encode: function (str: string): string {
     var characters = Base64.characters;
     var result = "";
 
@@ -37,7 +42,7 @@ export const Base64 = {
     return result;
   },
 
-  decode: function (str) {
+  decode: function (str: string): string {
     var characters = Base64.characters;
     var result = "";
 
