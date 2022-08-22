@@ -35,7 +35,7 @@ function runPortMessagingConnection(message: Message | any) {
   chrome.tabs.query(queryOptions, (tabs) => {
     if (tabs.length > 0) {
       let tab = tabs[0];
-      if(!tab.id) return;
+      if (!tab.id) return;
       const port = chrome.tabs.connect(tab.id);
       port.postMessage(message);
       port.onDisconnect.addListener((error): void => {
@@ -77,11 +77,18 @@ function saveData(annotation: Annotation) {
   });
 
   setDataToChromeStorage
-    .then(() => { console.log(`annotation saved for ${annotationForUrl[encodedUrlBase64].pageUrl}`); })
-    .catch((response) => { console.error(response); });  
+    .then(() => {
+      console.log(
+        `annotation saved for ${annotationForUrl[encodedUrlBase64].pageUrl}`
+      );
+    })
+    .catch((response) => {
+      console.error(response);
+    });
 }
 
-function fetchData(encodedUrlBase64: string, context: EventContext) {
+function fetchData(encodedUrlBase64: string) {
+  let annotation: Annotation;
   return new Promise((resolve, reject) => {
     chrome.storage.sync.get(encodedUrlBase64, (items) => {
       if (chrome.runtime.lastError) {
@@ -92,20 +99,23 @@ function fetchData(encodedUrlBase64: string, context: EventContext) {
   });
 }
 
-function createAnnotationObj(items: Object | any, context: EventContext){
-  return new Promise((resolve) => {
-    let annotation = new Annotation();
-    Object.assign(annotation, items);
-      message = {
-        context: context,
-        action: UserAction.fetchData,
-        data: annotation,
-      };
-      console.log(`Successfully fetched data: ${JSON.stringify(annotation)}`);
-      resolve(message);
-    });
-  };
-}
+// function createAnnotationObj(obj: Object | any, context: string): Annotation {
+//   let keys = Object.keys(obj);
+//   let values = Object.values(obj);
+//   for (let key in keys){
+//      if(key.length );
+//   }
+
+  // let annotation: Annotation = Object.assign({}, items[annotationKey]);
+  // message = {
+  //   context: context,
+  //   action: UserAction.fetchData,
+  //   data: annotation,
+  // };
+
+  // console.log(`Successfully fetched data: ${JSON.stringify(message.data)}`);
+  // return annotation;
+// }
 
 function onUpdatedTabCallback(
   tabId: number,
@@ -123,16 +133,29 @@ function onUpdatedTabCallback(
   if (onUpdatedTabState.complete === changeInfo.status) {
     onUpdatedTabStatus = onUpdatedTabState.complete;
     let encodedUrlBase64 = Base64.encode(tab.url);
-    let context = EventContext.onUpdatedTabComplete;
-
+    let context: string = EventContext.onUpdatedTabComplete;
+    console.log(`onUpdatedTabState complete called!`);
     // Promise chain to fetch and send data to content script
     // TODO: add listener and conditional for onMessage in extension popup.js to receive the annotation data
+    /*
     fetchData(encodedUrlBase64, context)
-      .then((items) => createAnnotationObj(items, context))
-      .then((message) => runPortMessagingConnection(message))
-      .catch((error) => { 
-        console.error(`Attempt at getting data from chrome storage resulted in this error: ${error}`);
+      .then((items) => {
+        let obj = Object.assign({}, items);
+        let annotation = createAnnotationObj(obj, context);
+        let message: Message;
+        message = {
+          context: context,
+          action: UserAction.fetchData,
+          data: annotation,
+        }
+        return runPortMessagingConnection(message);
+      })
+      .catch((error) => {
+        console.error(
+          `Attempt at getting data from chrome storage resulted in this error: ${error}`
+        );
       });
+      */
   }
 }
 
@@ -255,28 +278,65 @@ chrome.contextMenus.onClicked.addListener(onClickContextMenusCallback);
 chrome.runtime.onInstalled.addListener(createContextMenusCallback);
 
 // listening for messages from chrome extension popup.js or contentScript.js
-// TODO: implement an interface type for message to know what is being received
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (UserAction.saveData === message.action) {
-      setStorageItem(message.data);
-      sendResponse("saved data in background script to chrome storage");
-    } catch (error) {
-      sendResponse(
-        `Save was unsuccessful with this error: ${JSON.stringify(error)}`
-      );
-    }
-  }
-  if (UserAction.fetchData === message.action) {
+chrome.runtime.onMessage.addListener(
+  (message: Message, sender, sendResponse) => {
+    let context: string = message.context;
+    let action: string = message.action;
+    let annotation: Annotation = message.data;
     let encodedUrlBase64: string = Base64.encode(message.data.pageUrl);
-    try {
-      fetchDataForActiveUrl(encodedUrlBase64);
-    } catch (error) {
-      let activeTabUrl = getActiveTab();
-      console.log(
-        `No data to fetch for ${activeTabUrl}. Error message: ${JSON.stringify(
-          error
-        )}`
-      );
+
+    if (UserAction.saveData === action) {
+      saveData(annotation);
+      sendResponse("saved data in background script to chrome storage");
     }
+
+    // TODO: this message will occur when the extension popup
+    // if (UserAction.fetchData === action) {
+    //   fetchData(encodedUrlBase64, context)
+    //     .then((items) => {
+
+    //     })
+    //    .catch(error) {
+    //     let activeTabUrl = getActiveTab();
+    //     console.log(
+    //       `No data to fetch for ${activeTabUrl}. Error message: ${JSON.stringify(
+    //         error
+    //       )}`
+    //     );
+    //   }
+    // }
   }
+);
+
+chrome.webNavigation.onDOMContentLoaded.addListener((details) => {
+  console.log(`onDOMContentLoaded called!`);
+  // TODO: add listener and conditional for onMessage in extension popup.js to receive the annotation data
+  
+  // let encodedUrlBase64 = Base64.encode(tab.url);
+  // let context: string = EventContext.onDOMContentLoaded;
+  // fetchData(encodedUrlBase64)
+  // .then((items) => {
+  //   let itemsObj = items as Object;
+  //   let itemsArray = Object.entries(itemsObj);
+  //   itemsArray.forEach((value) => {
+  //     if(value.length > 10) return 
+  //   })
+    
+    // let annotation = assignedObj
+    // assignedObj as Annotation;
+
+    // let message: Message;
+    // message = {
+    //   context: context,
+    //   action: UserAction.fetchData,
+    //   data: annotation,
+    // }
+  //   return runPortMessagingConnection(message);
+  // })
+  // .catch((error) => {
+  //   console.error(
+  //     `Attempt at getting data from chrome storage resulted in this error: ${error}`
+  //   );
+  // });
+  
 });

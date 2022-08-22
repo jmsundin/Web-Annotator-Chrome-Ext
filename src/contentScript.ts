@@ -77,7 +77,7 @@ function onClickAddComment(): undefined {
   }
 }
 
-function addAnnotationForUrlIntoPopover(annotation: Annotation): undefined {
+function addAnnotationForUrlIntoPopover(annotation: Annotation) {
   if (sifterWebPagePopover && annotation) {
     let annotationElement: HTMLElement = document.createElement("div");
     annotationElement.className = "sifter-annotation";
@@ -335,11 +335,13 @@ messaging between extension processes in the chrome runtime, not the web page ru
 background.js (service worker) and content-script.js
 */
 chrome.runtime.onConnect.addListener((port) => {
-  port.onMessage.addListener((message) => {
+  port.onMessage.addListener((message: Message) => {
     // console.log(`Inside content script onMessage listener: message: ${JSON.stringify(message)}`);
-    let annotation: Annotation = message.data;
+    let context = message.context;
+    let action = message.action;
+    let annotation: Annotation = Object.assign({}, message.data);
 
-    if (UserAction.highlightSelectedText === message.action) {
+    if (UserAction.highlightSelectedText === action) {
       // assign selectedTextRange value to property in data object for storage
       // to be able to use it to add the annotation data back to the DOM when user
       // returns to web page
@@ -347,7 +349,10 @@ chrome.runtime.onConnect.addListener((port) => {
       // data.selectedTextRangeData = getSelectionRangeData(range);
       highlightSelectedText(annotation);
     }
-    if (UserAction.fetchData === message.action) {
+
+    // this conditional will be true when the background script has
+    // sent the fetched data to the content script
+    if (UserAction.fetchData === action) {
       createSifterWebPagePopover();
       addAnnotationForUrlIntoPopover(annotation);
     }

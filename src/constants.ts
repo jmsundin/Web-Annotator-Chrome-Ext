@@ -1,12 +1,3 @@
-interface Color {
-  yellow: string;
-  red: string;
-  blue: string;
-  green: string;
-  white: string;
-  grey: string;
-}
-
 const color: Color = {
   yellow: "yellow",
   red: "red",
@@ -17,6 +8,7 @@ const color: Color = {
 };
 
 enum EventContext {
+  onDOMContentLoaded = "on-dom-content-loaded",
   onUpdatedTabComplete = "on-updated-tab-complete",
   onClickContextMenuItem = "on-click-context-menu-item",
   onClickBrowserActionIcon = "on-click-browser-action-icon",
@@ -35,36 +27,47 @@ enum onUpdatedTabState {
 }
 
 // TODO: add selectionParentNode and selectionChildNode to Annotation interface
-export class Annotation {
-  id?: string;
-  highlightColor?: string | number;
+class Annotation {
+  id!: string;
+  highlightColor!: string | number;
+  pageUrl!: string;
   selectionText?: string;
-  comment?: string;
-  pageUrl?: string;
   urlTitle?: string;
+  comment?: string;
   srcUrl?: string;
-  constructor();
+  constructor(id: string, highlightColor: string | number, pageUrl: string);
   constructor(
-    id?: string,
-    highlightColor?: string | number,
+    id: string,
+    highlightColor: string | number,
+    pageUrl: string,
     selectionText?: string,
-    comment?: string,
     urlTitle?: string,
+    comment?: string,
     srcUrl?: string
   ) {
     this.id = id;
     this.highlightColor = highlightColor;
     this.selectionText = selectionText;
-    this.comment = comment;
+    this.pageUrl = pageUrl;
     this.urlTitle = urlTitle;
+    this.comment = comment;
     this.srcUrl = srcUrl;
   }
 }
 
-export type Message = {
+export interface Color {
+  yellow: string;
+  red: string;
+  blue: string;
+  green: string;
+  white: string;
+  grey: string;
+}
+
+export interface Message {
   context: string;
   action: string;
   data: Annotation;
-};
+}
 
-export { color, EventContext, UserAction, onUpdatedTabState };
+export { color, EventContext, UserAction, onUpdatedTabState, Annotation };

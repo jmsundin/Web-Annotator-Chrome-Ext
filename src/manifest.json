@@ -24,7 +24,7 @@
         "all_frames": true
       }
     ],
-    "permissions": ["activeTab", "storage", "contextMenus", "tabs", "scripting", "bookmarks"],
+    "permissions": ["webNavigation", "activeTab", "storage", "contextMenus", "tabs", "scripting", "bookmarks"],
     "action": {
       "default_icon": "../assets/sifter_on_128.png",
       "default_title": "Sifter Web Annotator",

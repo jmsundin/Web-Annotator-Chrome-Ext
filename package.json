@@ -24,6 +24,7 @@
   "devDependencies": {
     "@parcel/packager-ts": "^2.7.0",
     "@types/chrome": "^0.0.193",
+    "@types/node": "^18.7.9",
     "eslint": "^8.20.0",
     "parcel": "^2.7.0",
     "prettier": "^2.7.1",
